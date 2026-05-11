@@ -1,0 +1,1135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BPMN Map Converter</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap');
+:root{--bg:#f0f2f5;--panel:#fff;--border:#dde1e7;--text:#1a1f2e;--muted:#6b7280;--accent:#1d4ed8}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'IBM Plex Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex;flex-direction:column}
+header{display:flex;align-items:center;gap:14px;padding:14px 22px;background:var(--panel);border-bottom:1px solid var(--border);box-shadow:0 1px 3px rgba(0,0,0,.07)}
+.logo{font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:600;letter-spacing:.12em;color:var(--accent);text-transform:uppercase}
+.title{font-size:13px;color:#374151}
+.spacer{flex:1}
+main{flex:1;padding:32px;max-width:1100px;margin:0 auto;width:100%}
+.stage{background:#fff;border:1px solid var(--border);border-radius:8px;padding:28px;margin-bottom:18px}
+.stage h2{font-size:14px;font-weight:600;letter-spacing:.04em;color:#111827;margin-bottom:6px}
+.stage h2 .num{display:inline-flex;width:22px;height:22px;background:var(--accent);color:#fff;border-radius:50%;font-family:'IBM Plex Mono',monospace;font-size:11px;align-items:center;justify-content:center;margin-right:10px;vertical-align:middle}
+.stage p.hint{font-size:12px;color:var(--muted);margin-bottom:16px;line-height:1.5}
+#js-status{padding:8px 14px;background:#fef9c3;border:1px solid #fde68a;color:#854d0e;border-radius:4px;font-size:12px;margin-bottom:14px;font-family:'IBM Plex Mono',monospace}
+#js-status.ok{background:#dcfce7;border-color:#86efac;color:#166534}
+.drop{border:2px dashed #d1d5db;border-radius:6px;padding:40px;text-align:center;cursor:pointer;transition:all .15s;background:#fafbfc}
+.drop:hover,.drop.drag{border-color:var(--accent);background:#f0f7ff}
+.drop svg{width:36px;height:36px;stroke:#9ca3af;margin-bottom:10px}
+.drop-text{font-size:13px;color:#374151}
+.drop-sub{font-size:11px;color:var(--muted);margin-top:4px}
+input[type=file]{display:none}
+.controls{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:14px}
+.field-group{display:flex;flex-direction:column;gap:4px}
+.field-group label{font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+input[type=text]{padding:6px 10px;border:1px solid #d1d5db;border-radius:4px;font-family:'IBM Plex Sans',sans-serif;font-size:12px;width:280px}
+input[type=text]:focus{outline:2px solid var(--accent);outline-offset:-1px}
+button.primary{background:var(--accent);color:#fff;border:none;font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.06em;padding:8px 16px;border-radius:4px;cursor:pointer;text-transform:uppercase;transition:background .15s}
+button.primary:hover{background:#1e40af}
+button.primary:disabled{background:#9ca3af;cursor:not-allowed}
+button.ghost{background:#f3f4f6;border:1px solid #d1d5db;color:#374151;font-family:'IBM Plex Mono',monospace;font-size:11px;padding:6px 12px;border-radius:4px;cursor:pointer}
+button.ghost:hover{background:#e5e7eb}
+.progress{margin-top:16px;padding:14px 18px;background:#f9fafb;border:1px solid var(--border);border-radius:4px;font-family:'IBM Plex Mono',monospace;font-size:11px;line-height:1.7}
+.progress .step{color:var(--muted)}
+.progress .step.done{color:#16a34a}
+.progress .step.done::before{content:'\2713 '}
+.progress .step.active{color:var(--accent);font-weight:600}
+.progress .step.active::before{content:'\23F3 '}
+.preview{margin-top:16px;max-height:460px;overflow:auto;border:1px solid var(--border);border-radius:4px;background:#fafbfc;padding:12px}
+.preview svg{display:block;max-width:100%;height:auto}
+.detection-summary{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:14px}
+.stat{background:#f9fafb;border:1px solid var(--border);border-radius:4px;padding:12px}
+.stat .num{font-size:22px;font-weight:600;color:#111827;font-family:'IBM Plex Mono',monospace}
+.stat .label{font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-top:2px}
+.err{margin-top:12px;padding:10px 14px;background:#fef2f2;border:1px solid #fecaca;color:#991b1b;border-radius:4px;font-size:12px;line-height:1.5}
+.hidden{display:none!important}
+.edit-table{width:100%;margin-top:12px;border-collapse:collapse;font-size:12px}
+.edit-table th{text-align:left;padding:8px 10px;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--border);font-weight:600}
+.edit-table td{padding:6px 10px;border-bottom:1px solid #f3f4f6}
+.edit-table input[type=text]{width:100%}
+.badge{display:inline-block;font-size:9px;padding:2px 6px;border-radius:3px;letter-spacing:.06em;text-transform:uppercase;font-weight:600}
+.b-task{background:rgba(37,99,235,.10);color:#1d4ed8;border:1px solid rgba(37,99,235,.2)}
+.b-event{background:rgba(22,163,74,.10);color:#15803d;border:1px solid rgba(22,163,74,.2)}
+.b-gateway{background:rgba(217,119,6,.10);color:#b45309;border:1px solid rgba(217,119,6,.2)}
+.b-lane{background:rgba(124,58,237,.10);color:#6d28d9;border:1px solid rgba(124,58,237,.2)}
+#ocr-canvas{display:none}
+</style>
+</head>
+<body>
+<header>
+<div class="logo">BPMN MAP CONVERTER</div>
+<div class="title">Convert any BPMN 2.0 SVG into an interactive process map</div>
+<div class="spacer"></div>
+<button class="ghost" onclick="location.reload()">Reset</button>
+</header>
+<main>
+<div id="js-status">JavaScript loading...</div>
+
+<section class="stage">
+<h2><span class="num">1</span>Upload BPMN SVG</h2>
+<p class="hint">Drop or click to upload an SVG export from Lucidchart, Visio, draw.io, or any BPMN 2.0 tool. Best results with horizontal swim-lane layouts.</p>
+<div class="drop" id="drop">
+<input type="file" id="file-input" accept=".svg,image/svg+xml">
+<svg viewBox="0 0 24 24" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+<div class="drop-text">Drop your .svg file here, or click to browse</div>
+<div class="drop-sub">Files stay in your browser — nothing is uploaded.</div>
+</div>
+<div class="controls hidden" id="meta-controls">
+<div class="field-group"><label>Process code</label><input type="text" id="meta-code" value="KZNGFA"></div>
+<div class="field-group"><label>Process title</label><input type="text" id="meta-title"></div>
+</div>
+<div class="preview hidden" id="svg-preview"></div>
+<div class="err hidden" id="upload-err"></div>
+</section>
+
+<section class="stage hidden" id="stage-parse">
+<h2><span class="num">2</span>Detect shapes &amp; read labels</h2>
+<p class="hint">Geometry is detected from SVG paths. Text is read with on-device OCR (Tesseract.js, runs in your browser). Takes 10–40 seconds depending on map size.</p>
+<button class="primary" id="run-parse">Run Detection</button>
+<div class="progress hidden" id="progress"></div>
+<div class="detection-summary hidden" id="summary">
+<div class="stat"><div class="num" id="n-lanes">0</div><div class="label">Lanes</div></div>
+<div class="stat"><div class="num" id="n-tasks">0</div><div class="label">Tasks</div></div>
+<div class="stat"><div class="num" id="n-events">0</div><div class="label">Events</div></div>
+<div class="stat"><div class="num" id="n-gateways">0</div><div class="label">Gateways</div></div>
+</div>
+</section>
+
+<section class="stage hidden" id="stage-review">
+<h2><span class="num">3</span>Review &amp; correct labels</h2>
+<p class="hint">OCR isn't always perfect. Review the auto-detected labels below and fix any errors before generating the final page.</p>
+<div id="edit-tables"></div>
+</section>
+
+<section class="stage hidden" id="stage-generate">
+<h2><span class="num">4</span>Generate interactive map</h2>
+<p class="hint">Outputs a single self-contained HTML file with the same multi-select tasks, single-select events/gateways/lanes, color-coded inspector card.</p>
+<button class="primary" id="run-generate">Download Interactive HTML</button>
+</section>
+
+</main>
+<canvas id="ocr-canvas"></canvas>
+
+<!-- Output template stored as base64 in data attribute. Decoded by JS. -->
+<div id="output-template-store" data-tpl="PCFET0NUWVBFIGh0bWw+CjxodG1sIGxhbmc9ImVuIj4KPGhlYWQ+CjxtZXRhIGNoYXJzZXQ9IlVURi04Ij4KPG1ldGEgbmFtZT0idmlld3BvcnQiIGNvbnRlbnQ9IndpZHRoPWRldmljZS13aWR0aCwgaW5pdGlhbC1zY2FsZT0xLjAiPgo8dGl0bGU+X19DT0RFX18g4oCUIF9fVElUTEVfXzwvdGl0bGU+CjxzdHlsZT4KQGltcG9ydCB1cmwoJ2h0dHBzOi8vZm9udHMuZ29vZ2xlYXBpcy5jb20vY3NzMj9mYW1pbHk9SUJNK1BsZXgrTW9ubzp3Z2h0QDQwMDs2MDAmZmFtaWx5PUlCTStQbGV4K1NhbnM6d2dodEAzMDA7NDAwOzUwMDs2MDAmZGlzcGxheT1zd2FwJyk7Cjpyb290ey0tYmc6I2YwZjJmNTstLXBhbmVsOiNmZmY7LS1ib3JkZXI6I2RkZTFlNzstLXRleHQ6IzFhMWYyZTstLW11dGVkOiM2YjcyODA7LS1hY2NlbnQ6IzFkNGVkODstLWNvbC10YXNrOiMyNTYzZWI7LS1jb2wtZXZlbnQ6IzE2YTM0YTstLWNvbC1nYXRld2F5OiNkOTc3MDY7LS1jb2wtbGFuZTojN2MzYWVkfQoqe2JveC1zaXppbmc6Ym9yZGVyLWJveDttYXJnaW46MDtwYWRkaW5nOjB9CmJvZHl7Zm9udC1mYW1pbHk6J0lCTSBQbGV4IFNhbnMnLHNhbnMtc2VyaWY7YmFja2dyb3VuZDp2YXIoLS1iZyk7Y29sb3I6dmFyKC0tdGV4dCk7aGVpZ2h0OjEwMHZoO2Rpc3BsYXk6ZmxleDtmbGV4LWRpcmVjdGlvbjpjb2x1bW47b3ZlcmZsb3c6aGlkZGVufQpoZWFkZXJ7ZGlzcGxheTpmbGV4O2FsaWduLWl0ZW1zOmNlbnRlcjtnYXA6MTRweDtwYWRkaW5nOjlweCAxOHB4O2JhY2tncm91bmQ6dmFyKC0tcGFuZWwpO2JvcmRlci1ib3R0b206MXB4IHNvbGlkIHZhcigtLWJvcmRlcik7ZmxleC1zaHJpbms6MDt6LWluZGV4OjEwO2ZsZXgtd3JhcDp3cmFwO2JveC1zaGFkb3c6MCAxcHggM3B4IHJnYmEoMCwwLDAsLjA3KX0KLmxvZ297Zm9udC1mYW1pbHk6J0lCTSBQbGV4IE1vbm8nLG1vbm9zcGFjZTtmb250LXNpemU6MTFweDtmb250LXdlaWdodDo2MDA7bGV0dGVyLXNwYWNpbmc6LjEyZW07Y29sb3I6dmFyKC0tYWNjZW50KTt0ZXh0LXRyYW5zZm9ybTp1cHBlcmNhc2U7d2hpdGUtc3BhY2U6bm93cmFwfQoudGl0bGV7Zm9udC1zaXplOjEzcHg7Zm9udC13ZWlnaHQ6NTAwO2NvbG9yOiMzNzQxNTE7d2hpdGUtc3BhY2U6bm93cmFwfQouc3BhY2Vye2ZsZXg6MTttaW4td2lkdGg6OHB4fQoubGVnZW5ke2Rpc3BsYXk6ZmxleDtnYXA6MTBweDthbGlnbi1pdGVtczpjZW50ZXI7ZmxleC13cmFwOndyYXB9Ci5sZWdlbmQtaXRlbXtkaXNwbGF5OmZsZXg7YWxpZ24taXRlbXM6Y2VudGVyO2dhcDo1cHg7Zm9udC1zaXplOjExcHg7Y29sb3I6dmFyKC0tbXV0ZWQpO3doaXRlLXNwYWNlOm5vd3JhcH0KLmxlZ2VuZC1kb3R7d2lkdGg6MTBweDtoZWlnaHQ6MTBweDtib3JkZXItcmFkaXVzOjJweDtmbGV4LXNocmluazowfQouY29udHJvbHN7ZGlzcGxheTpmbGV4O2dhcDo1cHg7YWxpZ24taXRlbXM6Y2VudGVyfQojem9vbS1sYWJlbHtmb250LWZhbWlseTonSUJNIFBsZXggTW9ubycsbW9ub3NwYWNlO2ZvbnQtc2l6ZToxMXB4O2NvbG9yOnZhcigtLW11dGVkKTttaW4td2lkdGg6MzhweDt0ZXh0LWFsaWduOmNlbnRlcn0KYnV0dG9ue2JhY2tncm91bmQ6I2YzZjRmNjtib3JkZXI6MXB4IHNvbGlkICNkMWQ1ZGI7Y29sb3I6IzM3NDE1MTtmb250LWZhbWlseTonSUJNIFBsZXggTW9ubycsbW9ub3NwYWNlO2ZvbnQtc2l6ZToxMXB4O3BhZGRpbmc6NHB4IDEwcHg7Ym9yZGVyLXJhZGl1czo0cHg7Y3Vyc29yOnBvaW50ZXI7dHJhbnNpdGlvbjpiYWNrZ3JvdW5kIC4xNXN9CmJ1dHRvbjpob3ZlcntiYWNrZ3JvdW5kOiNlNWU3ZWJ9Cm1haW57ZGlzcGxheTpmbGV4O2ZsZXg6MTtvdmVyZmxvdzpoaWRkZW59CiNjYW52YXMtd3JhcHtmbGV4OjE7b3ZlcmZsb3c6YXV0bztwb3NpdGlvbjpyZWxhdGl2ZTtiYWNrZ3JvdW5kOiNmZmY7Y3Vyc29yOmdyYWJ9CiNjYW52YXMtd3JhcDphY3RpdmV7Y3Vyc29yOmdyYWJiaW5nfQojbWFwLWNvbnRhaW5lcntwb3NpdGlvbjpyZWxhdGl2ZTt0cmFuc2Zvcm0tb3JpZ2luOjAgMDtkaXNwbGF5OmlubGluZS1ibG9jazttYXJnaW46MTZweH0KI292ZXJsYXl7cG9zaXRpb246YWJzb2x1dGU7dG9wOjA7bGVmdDowO3BvaW50ZXItZXZlbnRzOm5vbmV9Ci5oaXR7cG9zaXRpb246YWJzb2x1dGU7Y3Vyc29yOnBvaW50ZXI7cG9pbnRlci1ldmVudHM6YWxsO3RyYW5zaXRpb246b3V0bGluZSAuMXMsYmFja2dyb3VuZCAuMXN9Ci5oaXQ6aG92ZXJ7b3V0bGluZToycHggZGFzaGVkIHJnYmEoMCwwLDAsLjI1KX0KLmhpdC10YXNre2JvcmRlci1yYWRpdXM6MTRweDtiYWNrZ3JvdW5kOnRyYW5zcGFyZW50fQouaGl0LXRhc2suc2VsZWN0ZWR7YmFja2dyb3VuZDpyZ2JhKDM3LDk5LDIzNSwuMTgpO291dGxpbmU6Mi41cHggc29saWQgIzI1NjNlYiFpbXBvcnRhbnQ7Ym94LXNoYWRvdzowIDAgMCA1cHggcmdiYSgzNyw5OSwyMzUsLjA4KX0KLmhpdC1ldmVudHtib3JkZXItcmFkaXVzOjUwJTtiYWNrZ3JvdW5kOnRyYW5zcGFyZW50fQouaGl0LWV2ZW50LnNlbGVjdGVke2JhY2tncm91bmQ6cmdiYSgyMiwxNjMsNzQsLjE4KTtvdXRsaW5lOjIuNXB4IHNvbGlkICMxNmEzNGEhaW1wb3J0YW50O2JveC1zaGFkb3c6MCAwIDAgNXB4IHJnYmEoMjIsMTYzLDc0LC4wOCl9Ci5oaXQtZ2F0ZXdheXtiYWNrZ3JvdW5kOnRyYW5zcGFyZW50O3RyYW5zZm9ybTpyb3RhdGUoNDVkZWcpO2JvcmRlci1yYWRpdXM6M3B4fQouaGl0LWdhdGV3YXk6aG92ZXJ7b3V0bGluZToycHggZGFzaGVkIHJnYmEoMCwwLDAsLjI1KSFpbXBvcnRhbnR9Ci5oaXQtZ2F0ZXdheS5zZWxlY3RlZHtiYWNrZ3JvdW5kOnJnYmEoMjE3LDExOSw2LC4xOCk7b3V0bGluZToyLjVweCBzb2xpZCAjZDk3NzA2IWltcG9ydGFudDtib3gtc2hhZG93OjAgMCAwIDVweCByZ2JhKDIxNywxMTksNiwuMDgpfQouaGl0LWxhbmV7YmFja2dyb3VuZDp0cmFuc3BhcmVudH0KLmhpdC1sYW5lOmhvdmVye2JhY2tncm91bmQ6cmdiYSgxMjQsNTgsMjM3LC4wNSk7b3V0bGluZTpub25lIWltcG9ydGFudH0KLmhpdC1sYW5lLnNlbGVjdGVke2JhY2tncm91bmQ6cmdiYSgxMjQsNTgsMjM3LC4xMCk7b3V0bGluZToycHggc29saWQgIzdjM2FlZCFpbXBvcnRhbnR9CiNwYW5lbHt3aWR0aDoyOTBweDtmbGV4LXNocmluazowO2JhY2tncm91bmQ6dmFyKC0tcGFuZWwpO2JvcmRlci1sZWZ0OjFweCBzb2xpZCB2YXIoLS1ib3JkZXIpO2Rpc3BsYXk6ZmxleDtmbGV4LWRpcmVjdGlvbjpjb2x1bW47b3ZlcmZsb3c6aGlkZGVuO2JveC1zaGFkb3c6LTFweCAwIDRweCByZ2JhKDAsMCwwLC4wNSl9Ci5wYW5lbC1oZWFke3BhZGRpbmc6MTNweCAxNnB4IDEwcHg7Ym9yZGVyLWJvdHRvbToxcHggc29saWQgdmFyKC0tYm9yZGVyKTtmbGV4LXNocmluazowfQoucGFuZWwtaGVhZCBoM3tmb250LXNpemU6MTBweDtmb250LXdlaWdodDo2MDA7bGV0dGVyLXNwYWNpbmc6LjEyZW07dGV4dC10cmFuc2Zvcm06dXBwZXJjYXNlO2NvbG9yOnZhcigtLW11dGVkKX0KLnBhbmVsLWJvZHl7ZmxleDoxO292ZXJmbG93LXk6YXV0bztwYWRkaW5nOjE0cHggMTZweH0KLmVtcHR5LXN0YXRle2Rpc3BsYXk6ZmxleDtmbGV4LWRpcmVjdGlvbjpjb2x1bW47YWxpZ24taXRlbXM6Y2VudGVyO2p1c3RpZnktY29udGVudDpjZW50ZXI7aGVpZ2h0OjIwMHB4O2dhcDoxMHB4O2NvbG9yOiM5Y2EzYWY7dGV4dC1hbGlnbjpjZW50ZXI7Zm9udC1zaXplOjEycHh9Ci5jYXJke2Rpc3BsYXk6bm9uZX0KLmNhcmQudmlzaWJsZXtkaXNwbGF5OmJsb2NrfQouY2FyZC1iYWRnZXtkaXNwbGF5OmlubGluZS1mbGV4O2FsaWduLWl0ZW1zOmNlbnRlcjtnYXA6NXB4O2ZvbnQtc2l6ZToxMHB4O2ZvbnQtd2VpZ2h0OjYwMDtsZXR0ZXItc3BhY2luZzouMDhlbTt0ZXh0LXRyYW5zZm9ybTp1cHBlcmNhc2U7cGFkZGluZzozcHggOXB4O2JvcmRlci1yYWRpdXM6M3B4O21hcmdpbi1ib3R0b206MTJweH0KLmJhZGdlLXRhc2t7YmFja2dyb3VuZDpyZ2JhKDM3LDk5LDIzNSwuMTApO2NvbG9yOiMxZDRlZDg7Ym9yZGVyOjFweCBzb2xpZCByZ2JhKDM3LDk5LDIzNSwuMil9Ci5iYWRnZS1ldmVudHtiYWNrZ3JvdW5kOnJnYmEoMjIsMTYzLDc0LC4xMCk7Y29sb3I6IzE1ODAzZDtib3JkZXI6MXB4IHNvbGlkIHJnYmEoMjIsMTYzLDc0LC4yKX0KLmJhZGdlLWdhdGV3YXl7YmFja2dyb3VuZDpyZ2JhKDIxNywxMTksNiwuMTApO2NvbG9yOiNiNDUzMDk7Ym9yZGVyOjFweCBzb2xpZCByZ2JhKDIxNywxMTksNiwuMil9Ci5iYWRnZS1sYW5le2JhY2tncm91bmQ6cmdiYSgxMjQsNTgsMjM3LC4xMCk7Y29sb3I6IzZkMjhkOTtib3JkZXI6MXB4IHNvbGlkIHJnYmEoMTI0LDU4LDIzNywuMil9Ci5jYXJkLXRpdGxle2ZvbnQtc2l6ZToxNXB4O2ZvbnQtd2VpZ2h0OjYwMDtjb2xvcjojMTExODI3O21hcmdpbi1ib3R0b206NXB4O2xpbmUtaGVpZ2h0OjEuM30KLmNhcmQtc3Vie2ZvbnQtc2l6ZToxMXB4O2NvbG9yOnZhcigtLW11dGVkKTttYXJnaW4tYm90dG9tOjE0cHg7bGluZS1oZWlnaHQ6MS41fQpocntib3JkZXI6bm9uZTtib3JkZXItdG9wOjFweCBzb2xpZCB2YXIoLS1ib3JkZXIpO21hcmdpbjoxMnB4IDB9Ci5maWVsZHttYXJnaW4tYm90dG9tOjEwcHh9Ci5mbHtmb250LXNpemU6MTBweDtmb250LXdlaWdodDo2MDA7bGV0dGVyLXNwYWNpbmc6LjA4ZW07dGV4dC10cmFuc2Zvcm06dXBwZXJjYXNlO2NvbG9yOnZhcigtLW11dGVkKTttYXJnaW4tYm90dG9tOjNweH0KLmZ2e2ZvbnQtc2l6ZToxMnB4O2NvbG9yOiMzNzQxNTE7bGluZS1oZWlnaHQ6MS40fQoubXVsdGktaGVhZGVye2ZvbnQtc2l6ZToxMXB4O2NvbG9yOnZhcigtLW11dGVkKTttYXJnaW4tYm90dG9tOjEwcHh9Ci5jaGlwe2Rpc3BsYXk6aW5saW5lLWZsZXg7YWxpZ24taXRlbXM6Y2VudGVyO2dhcDo0cHg7YmFja2dyb3VuZDpyZ2JhKDM3LDk5LDIzNSwuMDcpO2JvcmRlcjoxcHggc29saWQgcmdiYSgzNyw5OSwyMzUsLjIpO2NvbG9yOiMxZDRlZDg7Zm9udC1zaXplOjExcHg7cGFkZGluZzo0cHggOHB4O2JvcmRlci1yYWRpdXM6NHB4O21hcmdpbjozcHggM3B4IDNweCAwO2N1cnNvcjpwb2ludGVyO3RyYW5zaXRpb246YmFja2dyb3VuZCAuMXM7bGluZS1oZWlnaHQ6MS4zfQouY2hpcDpob3ZlcntiYWNrZ3JvdW5kOnJnYmEoMzcsOTksMjM1LC4xNCl9Ci5jaGlwLXh7Zm9udC1zaXplOjE0cHg7bGluZS1oZWlnaHQ6MTtvcGFjaXR5Oi41O21hcmdpbi1sZWZ0OjFweH0KLmNsZWFyLWJ0bnttYXJnaW4tdG9wOjEycHg7d2lkdGg6MTAwJTtiYWNrZ3JvdW5kOiNmOWZhZmI7Ym9yZGVyOjFweCBzb2xpZCB2YXIoLS1ib3JkZXIpO2NvbG9yOnZhcigtLW11dGVkKTtmb250LXNpemU6MTFweDtwYWRkaW5nOjdweDtib3JkZXItcmFkaXVzOjRweDtjdXJzb3I6cG9pbnRlcjtmb250LWZhbWlseTonSUJNIFBsZXggU2Fucycsc2Fucy1zZXJpZjt0cmFuc2l0aW9uOmJhY2tncm91bmQgLjFzfQouY2xlYXItYnRuOmhvdmVye2JhY2tncm91bmQ6I2YzZjRmNn0KOjotd2Via2l0LXNjcm9sbGJhcnt3aWR0aDo1cHg7aGVpZ2h0OjVweH0KOjotd2Via2l0LXNjcm9sbGJhci10cmFja3tiYWNrZ3JvdW5kOnRyYW5zcGFyZW50fQo6Oi13ZWJraXQtc2Nyb2xsYmFyLXRodW1ie2JhY2tncm91bmQ6I2QxZDVkYjtib3JkZXItcmFkaXVzOjNweH0KPC9zdHlsZT4KPC9oZWFkPgo8Ym9keT4KPGhlYWRlcj4KPGRpdiBjbGFzcz0ibG9nbyI+X19DT0RFX188L2Rpdj4KPGRpdiBjbGFzcz0idGl0bGUiPl9fVElUTEVfXyDigJQgQXMtSXMgUHJvY2VzcyBNYXA8L2Rpdj4KPGRpdiBjbGFzcz0ic3BhY2VyIj48L2Rpdj4KPGRpdiBjbGFzcz0ibGVnZW5kIj4KPGRpdiBjbGFzcz0ibGVnZW5kLWl0ZW0iPjxkaXYgY2xhc3M9ImxlZ2VuZC1kb3QiIHN0eWxlPSJiYWNrZ3JvdW5kOnZhcigtLWNvbC10YXNrKSI+PC9kaXY+VGFzayAobXVsdGktc2VsZWN0KTwvZGl2Pgo8ZGl2IGNsYXNzPSJsZWdlbmQtaXRlbSI+PGRpdiBjbGFzcz0ibGVnZW5kLWRvdCIgc3R5bGU9ImJhY2tncm91bmQ6dmFyKC0tY29sLWV2ZW50KTtib3JkZXItcmFkaXVzOjUwJSI+PC9kaXY+RXZlbnQ8L2Rpdj4KPGRpdiBjbGFzcz0ibGVnZW5kLWl0ZW0iPjxkaXYgY2xhc3M9ImxlZ2VuZC1kb3QiIHN0eWxlPSJiYWNrZ3JvdW5kOnZhcigtLWNvbC1nYXRld2F5KTt0cmFuc2Zvcm06cm90YXRlKDQ1ZGVnKSI+PC9kaXY+R2F0ZXdheTwvZGl2Pgo8ZGl2IGNsYXNzPSJsZWdlbmQtaXRlbSI+PGRpdiBjbGFzcz0ibGVnZW5kLWRvdCIgc3R5bGU9ImJhY2tncm91bmQ6dmFyKC0tY29sLWxhbmUpIj48L2Rpdj5MYW5lPC9kaXY+CjwvZGl2Pgo8ZGl2IGNsYXNzPSJjb250cm9scyI+CjxzcGFuIGlkPSJ6b29tLWxhYmVsIj4xMDAlPC9zcGFuPgo8YnV0dG9uIG9uY2xpY2s9Inpvb20oLTAuMTUpIj7iiJI8L2J1dHRvbj4KPGJ1dHRvbiBvbmNsaWNrPSJ6b29tKCswLjE1KSI+KzwvYnV0dG9uPgo8YnV0dG9uIG9uY2xpY2s9ImZpdFNjcmVlbigpIj5GaXQ8L2J1dHRvbj4KPC9kaXY+CjwvaGVhZGVyPgo8bWFpbj4KPGRpdiBpZD0iY2FudmFzLXdyYXAiPgo8ZGl2IGlkPSJtYXAtY29udGFpbmVyIj4KPGRpdiBpZD0ic3ZnLXdyYXAiPl9fU1ZHX1JBV19fPC9kaXY+CjxkaXYgaWQ9Im92ZXJsYXkiPjwvZGl2Pgo8L2Rpdj4KPC9kaXY+CjxkaXYgaWQ9InBhbmVsIj4KPGRpdiBjbGFzcz0icGFuZWwtaGVhZCI+PGgzPlNlbGVjdGlvbiBJbnNwZWN0b3I8L2gzPjwvZGl2Pgo8ZGl2IGNsYXNzPSJwYW5lbC1ib2R5Ij4KPGRpdiBjbGFzcz0iZW1wdHktc3RhdGUiIGlkPSJlbXB0eS1zdGF0ZSI+Cjxzdmcgd2lkdGg9IjM0IiBoZWlnaHQ9IjM0IiB2aWV3Qm94PSIwIDAgMjQgMjQiIGZpbGw9Im5vbmUiIHN0cm9rZT0iIzljYTNhZiIgc3Ryb2tlLXdpZHRoPSIxLjQiPjxjaXJjbGUgY3g9IjExIiBjeT0iMTEiIHI9IjgiLz48cGF0aCBkPSJNMjEgMjFsLTQuMzUtNC4zNSIvPjwvc3ZnPgo8c3BhbiBzdHlsZT0iY29sb3I6IzljYTNhZiI+Q2xpY2sgYW55IGVsZW1lbnQ8YnI+dG8gaW5zcGVjdCBpdC48YnI+PGJyPjxlbSBzdHlsZT0ib3BhY2l0eTouNyI+VGFza3Mgc3VwcG9ydDxicj5tdWx0aS1zZWxlY3QuPC9lbT48L3NwYW4+CjwvZGl2Pgo8ZGl2IGNsYXNzPSJjYXJkIiBpZD0ic2luZ2xlLWNhcmQiPgo8ZGl2IGNsYXNzPSJjYXJkLWJhZGdlIiBpZD0iY2FyZC1iYWRnZSI+PC9kaXY+CjxkaXYgY2xhc3M9ImNhcmQtdGl0bGUiIGlkPSJjYXJkLXRpdGxlIj48L2Rpdj4KPGRpdiBjbGFzcz0iY2FyZC1zdWIiIGlkPSJjYXJkLXN1YiI+PC9kaXY+Cjxocj4KPGRpdiBjbGFzcz0iZmllbGQiPjxkaXYgY2xhc3M9ImZsIj5FbGVtZW50IFR5cGU8L2Rpdj48ZGl2IGNsYXNzPSJmdiIgaWQ9ImNhcmQtdHlwZSI+PC9kaXY+PC9kaXY+CjxkaXYgY2xhc3M9ImZpZWxkIj48ZGl2IGNsYXNzPSJmbCIgaWQ9ImNhcmQtbGFuZS1sYWJlbCI+U3dpbSBMYW5lPC9kaXY+PGRpdiBjbGFzcz0iZnYiIGlkPSJjYXJkLWxhbmUiPjwvZGl2PjwvZGl2Pgo8L2Rpdj4KPGRpdiBjbGFzcz0iY2FyZCIgaWQ9Im11bHRpLWNhcmQiPgo8ZGl2IGNsYXNzPSJjYXJkLWJhZGdlIGJhZGdlLXRhc2siPlRhc2tzIFNlbGVjdGVkPC9kaXY+CjxkaXYgY2xhc3M9Im11bHRpLWhlYWRlciIgaWQ9Im11bHRpLWNvdW50Ij48L2Rpdj4KPGRpdiBpZD0iY2hpcC1jb250YWluZXIiPjwvZGl2Pgo8YnV0dG9uIGNsYXNzPSJjbGVhci1idG4iIG9uY2xpY2s9ImNsZWFyVGFza3MoKSI+Q2xlYXIgYWxsIHRhc2tzPC9idXR0b24+CjwvZGl2Pgo8L2Rpdj4KPC9kaXY+CjwvbWFpbj4KPHNjcmlwdCBpZD0ibWFwLWRhdGEiIHR5cGU9ImFwcGxpY2F0aW9uL2pzb24iPl9fREFUQV9KU09OX188L3NjcmlwdD4KPHNjcmlwdD4KKGZ1bmN0aW9uKCl7CiAgdmFyIGRhdGEgPSBKU09OLnBhcnNlKGRvY3VtZW50LmdldEVsZW1lbnRCeUlkKCdtYXAtZGF0YScpLnRleHRDb250ZW50KTsKICB2YXIgU1ZHX1cgPSBkYXRhLnN2Z1csIFNWR19IID0gZGF0YS5zdmdIOwogIHZhciBMQU5FUyA9IGRhdGEubGFuZXMsIFRBU0tTID0gZGF0YS50YXNrcywgRVZFTlRTID0gZGF0YS5ldmVudHMsIEdBVEVXQVlTID0gZGF0YS5nYXRld2F5czsKCiAgdmFyIHN2Z0VsID0gZG9jdW1lbnQucXVlcnlTZWxlY3RvcignI3N2Zy13cmFwIHN2ZycpOwogIGlmIChzdmdFbCkgewogICAgc3ZnRWwuc3R5bGUuZGlzcGxheSA9ICdibG9jayc7CiAgICBzdmdFbC5zZXRBdHRyaWJ1dGUoJ3dpZHRoJywgU1ZHX1cpOwogICAgc3ZnRWwuc2V0QXR0cmlidXRlKCdoZWlnaHQnLCBTVkdfSCk7CiAgfQogIHZhciBvdmVybGF5ID0gZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoJ292ZXJsYXknKTsKICBvdmVybGF5LnN0eWxlLmNzc1RleHQgPSAncG9zaXRpb246YWJzb2x1dGU7dG9wOjA7bGVmdDowO3dpZHRoOicrU1ZHX1crJ3B4O2hlaWdodDonK1NWR19IKydweDtwb2ludGVyLWV2ZW50czpub25lJzsKCiAgdmFyIHNjYWxlID0gMSwgc2VsU2luZ2xlID0gbnVsbCwgc2VsVGFza3MgPSBbXTsKCiAgZnVuY3Rpb24gbWtIaXQoY2xzLCBzdHlsZSwgY2xpY2tGbikgewogICAgdmFyIGQgPSBkb2N1bWVudC5jcmVhdGVFbGVtZW50KCdkaXYnKTsKICAgIGQuY2xhc3NOYW1lID0gJ2hpdCAnICsgY2xzOwogICAgZC5zdHlsZS5jc3NUZXh0ID0gc3R5bGU7CiAgICBkLmFkZEV2ZW50TGlzdGVuZXIoJ2NsaWNrJywgZnVuY3Rpb24oZSl7IGUuc3RvcFByb3BhZ2F0aW9uKCk7IGNsaWNrRm4oZCk7IH0pOwogICAgb3ZlcmxheS5hcHBlbmRDaGlsZChkKTsKICAgIHJldHVybiBkOwogIH0KCiAgTEFORVMuZm9yRWFjaChmdW5jdGlvbihsKXsKICAgIG1rSGl0KCdoaXQtbGFuZScsICdsZWZ0OicrbC54MSsncHg7dG9wOicrbC55MSsncHg7d2lkdGg6JysobC54Mi1sLngxKSsncHg7aGVpZ2h0OicrKGwueTItbC55MSkrJ3B4OycsIGZ1bmN0aW9uKGQpeyBzZWxlY3RTaW5nbGUobCwgZCwgJ2xhbmUnKTsgfSk7CiAgfSk7CiAgVEFTS1MuZm9yRWFjaChmdW5jdGlvbih0KXsKICAgIHZhciBlbCA9IG1rSGl0KCdoaXQtdGFzaycsICdsZWZ0OicrdC54KydweDt0b3A6Jyt0LnkrJ3B4O3dpZHRoOicrdC53KydweDtoZWlnaHQ6Jyt0LmgrJ3B4OycsIGZ1bmN0aW9uKGQpeyB0b2dnbGVUYXNrKHQsIGQpOyB9KTsKICAgIGVsLl90YXNrSWQgPSB0LmlkOwogIH0pOwogIEVWRU5UUy5mb3JFYWNoKGZ1bmN0aW9uKGV2KXsKICAgIG1rSGl0KCdoaXQtZXZlbnQnLCAnbGVmdDonK2V2LngrJ3B4O3RvcDonK2V2LnkrJ3B4O3dpZHRoOicrZXYucisncHg7aGVpZ2h0OicrZXYucisncHg7JywgZnVuY3Rpb24oZCl7IHNlbGVjdFNpbmdsZShldiwgZCwgJ2V2ZW50Jyk7IH0pOwogIH0pOwogIEdBVEVXQVlTLmZvckVhY2goZnVuY3Rpb24oZ3cpewogICAgdmFyIHN6ID0gKGd3LmJib3ggJiYgZ3cuYmJveC53KSA/IE1hdGgubWluKGd3LmJib3gudywgZ3cuYmJveC5oKSAqIDAuNyA6IDY2OwogICAgbWtIaXQoJ2hpdC1nYXRld2F5JywgJ2xlZnQ6JysoZ3cuY3gtc3ovMikrJ3B4O3RvcDonKyhndy5jeS1zei8yKSsncHg7d2lkdGg6JytzeisncHg7aGVpZ2h0Oicrc3orJ3B4OycsIGZ1bmN0aW9uKGQpeyBzZWxlY3RTaW5nbGUoZ3csIGQsICdnYXRld2F5Jyk7IH0pOwogIH0pOwoKICBkb2N1bWVudC5nZXRFbGVtZW50QnlJZCgnY2FudmFzLXdyYXAnKS5hZGRFdmVudExpc3RlbmVyKCdjbGljaycsIGNsZWFyQWxsKTsKCiAgZnVuY3Rpb24gY2xlYXJBbGwoKXsKICAgIHNlbFNpbmdsZSA9IG51bGw7IHNlbFRhc2tzID0gW107CiAgICBkb2N1bWVudC5xdWVyeVNlbGVjdG9yQWxsKCcuaGl0JykuZm9yRWFjaChmdW5jdGlvbihlKXsgZS5jbGFzc0xpc3QucmVtb3ZlKCdzZWxlY3RlZCcpOyB9KTsKICAgIHNob3dFbXB0eSgpOwogIH0KICB3aW5kb3cuY2xlYXJUYXNrcyA9IGZ1bmN0aW9uKCl7CiAgICBzZWxUYXNrcyA9IFtdOwogICAgZG9jdW1lbnQucXVlcnlTZWxlY3RvckFsbCgnLmhpdC10YXNrJykuZm9yRWFjaChmdW5jdGlvbihlKXsgZS5jbGFzc0xpc3QucmVtb3ZlKCdzZWxlY3RlZCcpOyB9KTsKICAgIGlmICghc2VsU2luZ2xlKSBzaG93RW1wdHkoKTsgZWxzZSByZW5kZXJTaW5nbGUoc2VsU2luZ2xlLmRhdGEsIHNlbFNpbmdsZS50eXBlKTsKICB9OwogIGZ1bmN0aW9uIGNsZWFyU2luZ2xlRWwoKXsgaWYgKHNlbFNpbmdsZSAmJiBzZWxTaW5nbGUuZWwpIHNlbFNpbmdsZS5lbC5jbGFzc0xpc3QucmVtb3ZlKCdzZWxlY3RlZCcpOyB9CiAgZnVuY3Rpb24gc2VsZWN0U2luZ2xlKGQsIGVsLCB0eXBlKXsKICAgIGNsZWFyU2luZ2xlRWwoKTsKICAgIHNlbFRhc2tzID0gW107CiAgICBkb2N1bWVudC5xdWVyeVNlbGVjdG9yQWxsKCcuaGl0LXRhc2snKS5mb3JFYWNoKGZ1bmN0aW9uKGUpeyBlLmNsYXNzTGlzdC5yZW1vdmUoJ3NlbGVjdGVkJyk7IH0pOwogICAgZWwuY2xhc3NMaXN0LmFkZCgnc2VsZWN0ZWQnKTsKICAgIHNlbFNpbmdsZSA9IHsgZGF0YTogZCwgZWw6IGVsLCB0eXBlOiB0eXBlIH07CiAgICByZW5kZXJTaW5nbGUoZCwgdHlwZSk7CiAgfQogIGZ1bmN0aW9uIHRvZ2dsZVRhc2sodCwgZWwpewogICAgaWYgKHNlbFNpbmdsZSkgeyBjbGVhclNpbmdsZUVsKCk7IHNlbFNpbmdsZSA9IG51bGw7IH0KICAgIHZhciBpID0gc2VsVGFza3MuaW5kZXhPZih0LmlkKTsKICAgIGlmIChpID09PSAtMSkgeyBzZWxUYXNrcy5wdXNoKHQuaWQpOyBlbC5jbGFzc0xpc3QuYWRkKCdzZWxlY3RlZCcpOyB9CiAgICBlbHNlIHsgc2VsVGFza3Muc3BsaWNlKGksIDEpOyBlbC5jbGFzc0xpc3QucmVtb3ZlKCdzZWxlY3RlZCcpOyB9CiAgICBpZiAoc2VsVGFza3MubGVuZ3RoID09PSAwKSB7IHNob3dFbXB0eSgpOyByZXR1cm47IH0KICAgIHJlbmRlck11bHRpKCk7CiAgfQogIGZ1bmN0aW9uIHNob3dFbXB0eSgpewogICAgZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoJ2VtcHR5LXN0YXRlJykuc3R5bGUuZGlzcGxheSA9ICdmbGV4JzsKICAgIGRvY3VtZW50LmdldEVsZW1lbnRCeUlkKCdzaW5nbGUtY2FyZCcpLmNsYXNzTGlzdC5yZW1vdmUoJ3Zpc2libGUnKTsKICAgIGRvY3VtZW50LmdldEVsZW1lbnRCeUlkKCdtdWx0aS1jYXJkJykuY2xhc3NMaXN0LnJlbW92ZSgndmlzaWJsZScpOwogIH0KICBmdW5jdGlvbiByZW5kZXJTaW5nbGUoZCwgdHlwZSl7CiAgICBpZiAoIWQpIHJldHVybjsKICAgIGRvY3VtZW50LmdldEVsZW1lbnRCeUlkKCdlbXB0eS1zdGF0ZScpLnN0eWxlLmRpc3BsYXkgPSAnbm9uZSc7CiAgICBkb2N1bWVudC5nZXRFbGVtZW50QnlJZCgnbXVsdGktY2FyZCcpLmNsYXNzTGlzdC5yZW1vdmUoJ3Zpc2libGUnKTsKICAgIGRvY3VtZW50LmdldEVsZW1lbnRCeUlkKCdzaW5nbGUtY2FyZCcpLmNsYXNzTGlzdC5hZGQoJ3Zpc2libGUnKTsKICAgIHZhciBiTWFwID0geyBsYW5lOlsnYmFkZ2UtbGFuZScsJ1N3aW0gTGFuZSddLCBldmVudDpbJ2JhZGdlLWV2ZW50JywnQlBNTiBFdmVudCddLCBnYXRld2F5OlsnYmFkZ2UtZ2F0ZXdheScsJ0dhdGV3YXknXSwgdGFzazpbJ2JhZGdlLXRhc2snLCdUYXNrJ10gfTsKICAgIHZhciBiID0gYk1hcFt0eXBlXSB8fCBiTWFwLnRhc2s7CiAgICB2YXIgYmFkZ2UgPSBkb2N1bWVudC5nZXRFbGVtZW50QnlJZCgnY2FyZC1iYWRnZScpOwogICAgYmFkZ2UuY2xhc3NOYW1lID0gJ2NhcmQtYmFkZ2UgJyArIGJbMF07CiAgICBiYWRnZS50ZXh0Q29udGVudCA9IGJbMV07CiAgICBkb2N1bWVudC5nZXRFbGVtZW50QnlJZCgnY2FyZC10aXRsZScpLnRleHRDb250ZW50ID0gZC5sYWJlbCB8fCAnKG5vIGxhYmVsKSc7CiAgICBkb2N1bWVudC5nZXRFbGVtZW50QnlJZCgnY2FyZC1zdWInKS50ZXh0Q29udGVudCA9IGQuc3ViIHx8ICcnOwogICAgdmFyIHR5cGVUZXh0ID0gdHlwZSA9PT0gJ2xhbmUnID8gJ1N3aW0gTGFuZSAoUG9vbCBQYXJ0aXRpb24pJyA6CiAgICAgICAgICAgICAgICAgICB0eXBlID09PSAnZXZlbnQnID8gZC50eXBlIDoKICAgICAgICAgICAgICAgICAgIHR5cGUgPT09ICdnYXRld2F5JyA/IGQudHlwZSA6ICdUYXNrIChBY3Rpdml0eSknOwogICAgZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoJ2NhcmQtdHlwZScpLnRleHRDb250ZW50ID0gdHlwZVRleHQ7CiAgICB2YXIgbGwgPSBkb2N1bWVudC5nZXRFbGVtZW50QnlJZCgnY2FyZC1sYW5lLWxhYmVsJyksIGx2ID0gZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoJ2NhcmQtbGFuZScpOwogICAgaWYgKHR5cGUgPT09ICdsYW5lJykgewogICAgICBsbC50ZXh0Q29udGVudCA9ICdTcGFuJzsKICAgICAgbHYudGV4dENvbnRlbnQgPSAoKGQueTIgLSBkLnkxKXwwKSArICcgcHggdmVydGljYWwnOwogICAgfSBlbHNlIHsKICAgICAgbGwudGV4dENvbnRlbnQgPSAnU3dpbSBMYW5lJzsKICAgICAgbHYudGV4dENvbnRlbnQgPSBkLmxhbmUgfHwgZ2V0TGFuZSh0eXBlID09PSAnZXZlbnQnID8gKGQueSArIGQuci8yKSA6IHR5cGUgPT09ICdnYXRld2F5JyA/IGQuY3kgOiBkLnkgKyBkLmgvMik7CiAgICB9CiAgfQogIGZ1bmN0aW9uIHJlbmRlck11bHRpKCl7CiAgICBkb2N1bWVudC5nZXRFbGVtZW50QnlJZCgnZW1wdHktc3RhdGUnKS5zdHlsZS5kaXNwbGF5ID0gJ25vbmUnOwogICAgZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoJ3NpbmdsZS1jYXJkJykuY2xhc3NMaXN0LnJlbW92ZSgndmlzaWJsZScpOwogICAgZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoJ211bHRpLWNhcmQnKS5jbGFzc0xpc3QuYWRkKCd2aXNpYmxlJyk7CiAgICB2YXIgbiA9IHNlbFRhc2tzLmxlbmd0aDsKICAgIGRvY3VtZW50LmdldEVsZW1lbnRCeUlkKCdtdWx0aS1jb3VudCcpLnRleHRDb250ZW50ID0gbiArICcgdGFzaycgKyAobiA9PT0gMSA/ICcnIDogJ3MnKSArICcgc2VsZWN0ZWQnOwogICAgdmFyIGNjID0gZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoJ2NoaXAtY29udGFpbmVyJyk7CiAgICBjYy5pbm5lckhUTUwgPSAnJzsKICAgIHNlbFRhc2tzLmZvckVhY2goZnVuY3Rpb24odGlkKXsKICAgICAgdmFyIHQgPSBUQVNLUy5maW5kKGZ1bmN0aW9uKHgpeyByZXR1cm4geC5pZCA9PT0gdGlkOyB9KTsKICAgICAgaWYgKCF0KSByZXR1cm47CiAgICAgIHZhciBjID0gZG9jdW1lbnQuY3JlYXRlRWxlbWVudCgnZGl2Jyk7CiAgICAgIGMuY2xhc3NOYW1lID0gJ2NoaXAnOwogICAgICB2YXIgbGFiZWwgPSBkb2N1bWVudC5jcmVhdGVFbGVtZW50KCdzcGFuJyk7CiAgICAgIGxhYmVsLnRleHRDb250ZW50ID0gdC5sYWJlbCB8fCAnKG5vIGxhYmVsKSc7CiAgICAgIHZhciB4ID0gZG9jdW1lbnQuY3JlYXRlRWxlbWVudCgnc3BhbicpOwogICAgICB4LmNsYXNzTmFtZSA9ICdjaGlwLXgnOwogICAgICB4LnRleHRDb250ZW50ID0gJ8OXJzsKICAgICAgeC5kYXRhc2V0LmlkID0gdGlkOwogICAgICB4LmFkZEV2ZW50TGlzdGVuZXIoJ2NsaWNrJywgZnVuY3Rpb24oZSl7CiAgICAgICAgZS5zdG9wUHJvcGFnYXRpb24oKTsKICAgICAgICB2YXIgaWQgPSBlLnRhcmdldC5kYXRhc2V0LmlkOwogICAgICAgIGRvY3VtZW50LnF1ZXJ5U2VsZWN0b3JBbGwoJy5oaXQtdGFzaycpLmZvckVhY2goZnVuY3Rpb24oZWwpeyBpZiAoZWwuX3Rhc2tJZCA9PT0gaWQpIGVsLmNsYXNzTGlzdC5yZW1vdmUoJ3NlbGVjdGVkJyk7IH0pOwogICAgICAgIHNlbFRhc2tzID0gc2VsVGFza3MuZmlsdGVyKGZ1bmN0aW9uKHopeyByZXR1cm4geiAhPT0gaWQ7IH0pOwogICAgICAgIGlmIChzZWxUYXNrcy5sZW5ndGggPT09IDApIHNob3dFbXB0eSgpOyBlbHNlIHJlbmRlck11bHRpKCk7CiAgICAgIH0pOwogICAgICBjLmFwcGVuZENoaWxkKGxhYmVsKTsKICAgICAgYy5hcHBlbmRDaGlsZCh4KTsKICAgICAgY2MuYXBwZW5kQ2hpbGQoYyk7CiAgICB9KTsKICB9CiAgZnVuY3Rpb24gZ2V0TGFuZSh5KXsKICAgIHZhciBsID0gTEFORVMuZmluZChmdW5jdGlvbih4KXsgcmV0dXJuIHkgPj0geC55MSAmJiB5IDw9IHgueTI7IH0pOwogICAgcmV0dXJuIGwgPyBsLmxhYmVsIDogJ+KAlCc7CiAgfQogIHdpbmRvdy56b29tID0gZnVuY3Rpb24oZCl7IHNjYWxlID0gTWF0aC5taW4oMywgTWF0aC5tYXgoLjE1LCBzY2FsZSArIGQpKTsgYXBwbHlTY2FsZSgpOyB9OwogIHdpbmRvdy5maXRTY3JlZW4gPSBmdW5jdGlvbigpewogICAgdmFyIHcgPSBkb2N1bWVudC5nZXRFbGVtZW50QnlJZCgnY2FudmFzLXdyYXAnKTsKICAgIHNjYWxlID0gTWF0aC5taW4oKHcuY2xpZW50V2lkdGggLSA0OCkgLyBTVkdfVywgKHcuY2xpZW50SGVpZ2h0IC0gNDgpIC8gU1ZHX0gpOwogICAgYXBwbHlTY2FsZSgpOwogIH07CiAgZnVuY3Rpb24gYXBwbHlTY2FsZSgpewogICAgZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoJ21hcC1jb250YWluZXInKS5zdHlsZS50cmFuc2Zvcm0gPSAnc2NhbGUoJyArIHNjYWxlICsgJyknOwogICAgZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoJ3pvb20tbGFiZWwnKS50ZXh0Q29udGVudCA9IE1hdGgucm91bmQoc2NhbGUgKiAxMDApICsgJyUnOwogIH0KICBzZXRUaW1lb3V0KHdpbmRvdy5maXRTY3JlZW4sIDgwKTsKCiAgKGZ1bmN0aW9uKCl7CiAgICB2YXIgdyA9IGRvY3VtZW50LmdldEVsZW1lbnRCeUlkKCdjYW52YXMtd3JhcCcpOwogICAgdmFyIGRyYWcgPSBmYWxzZSwgc3gsIHN5LCBzbCwgc3Q7CiAgICB3LmFkZEV2ZW50TGlzdGVuZXIoJ21vdXNlZG93bicsIGZ1bmN0aW9uKGUpewogICAgICBpZiAoZS50YXJnZXQuY2xhc3NMaXN0LmNvbnRhaW5zKCdoaXQnKSkgcmV0dXJuOwogICAgICBkcmFnID0gdHJ1ZTsgc3ggPSBlLmNsaWVudFg7IHN5ID0gZS5jbGllbnRZOyBzbCA9IHcuc2Nyb2xsTGVmdDsgc3QgPSB3LnNjcm9sbFRvcDsKICAgIH0pOwogICAgd2luZG93LmFkZEV2ZW50TGlzdGVuZXIoJ21vdXNlbW92ZScsIGZ1bmN0aW9uKGUpewogICAgICBpZiAoIWRyYWcpIHJldHVybjsKICAgICAgdy5zY3JvbGxMZWZ0ID0gc2wgLSAoZS5jbGllbnRYIC0gc3gpOwogICAgICB3LnNjcm9sbFRvcCA9IHN0IC0gKGUuY2xpZW50WSAtIHN5KTsKICAgIH0pOwogICAgd2luZG93LmFkZEV2ZW50TGlzdGVuZXIoJ21vdXNldXAnLCBmdW5jdGlvbigpeyBkcmFnID0gZmFsc2U7IH0pOwogICAgdy5hZGRFdmVudExpc3RlbmVyKCd3aGVlbCcsIGZ1bmN0aW9uKGUpeyBlLnByZXZlbnREZWZhdWx0KCk7IHdpbmRvdy56b29tKGUuZGVsdGFZIDwgMCA/IC4xIDogLS4xKTsgfSwgeyBwYXNzaXZlOiBmYWxzZSB9KTsKICB9KSgpOwp9KSgpOwo8L3NjcmlwdD4KPC9ib2R5Pgo8L2h0bWw+Cg==" style="display:none"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/5.1.0/tesseract.min.js"></script>
+<script>
+"use strict";
+console.log("[converter] script start");
+document.getElementById("js-status").textContent = "JavaScript ready (v3 — Visio + Lucidchart support)";
+document.getElementById("js-status").classList.add("ok");
+
+var state = {
+  svgText: null, svgEl: null, viewBox: null,
+  lanes: [], tasks: [], events: [], gateways: [],
+  code: "KZNGFA", title: ""
+};
+
+// ---------- STAGE 1: UPLOAD ----------
+var drop = document.getElementById("drop");
+var fileInput = document.getElementById("file-input");
+var preview = document.getElementById("svg-preview");
+var uploadErr = document.getElementById("upload-err");
+var metaControls = document.getElementById("meta-controls");
+var titleInput = document.getElementById("meta-title");
+var codeInput = document.getElementById("meta-code");
+
+drop.addEventListener("click", function(){
+  console.log("[converter] drop clicked");
+  fileInput.click();
+});
+
+["dragenter","dragover","drop"].forEach(function(ev){
+  window.addEventListener(ev, function(e){ e.preventDefault(); }, false);
+});
+drop.addEventListener("dragenter", function(e){ e.preventDefault(); drop.classList.add("drag"); });
+drop.addEventListener("dragover",  function(e){ e.preventDefault(); drop.classList.add("drag"); });
+drop.addEventListener("dragleave", function(){ drop.classList.remove("drag"); });
+drop.addEventListener("drop", function(e){
+  e.preventDefault();
+  drop.classList.remove("drag");
+  var f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+  console.log("[converter] drop event, file:", f);
+  if (f) handleFile(f);
+});
+fileInput.addEventListener("change", function(e){
+  console.log("[converter] file change, files:", e.target.files);
+  if (e.target.files[0]) handleFile(e.target.files[0]);
+});
+titleInput.addEventListener("input", function(e){ state.title = e.target.value; });
+codeInput.addEventListener("input", function(e){ state.code = e.target.value.toUpperCase(); });
+
+function showErr(id, msg){
+  var el = document.getElementById(id);
+  el.textContent = msg;
+  el.classList.remove("hidden");
+}
+
+function handleFile(file){
+  console.log("[converter v3] handleFile:", file.name, file.type, file.size);
+  uploadErr.classList.add("hidden");
+  var nameOk = file.name.toLowerCase().endsWith(".svg");
+  var typeOk = file.type === "image/svg+xml" || file.type === "" || file.type === "text/xml";
+  if (!nameOk && !typeOk) {
+    showErr("upload-err", "Please upload an .svg file. (Got: " + file.name + ", " + file.type + ")");
+    return;
+  }
+  var reader = new FileReader();
+  reader.onload = function(e){
+    var text = e.target.result;
+    console.log("[converter] read", text.length, "chars");
+    if (text.indexOf("<svg") === -1) {
+      showErr("upload-err", "File does not contain valid SVG content.");
+      return;
+    }
+    // Pre-clean for the DOM preview as well: strip XML decl, DOCTYPE, and embedded
+    // <image> tags. Visio embeds a base64 PNG that taints the canvas later, so we
+    // remove it up-front. The rest of the SVG is preserved verbatim.
+    var cleaned = text;
+    cleaned = cleaned.replace(/<\?xml[\s\S]*?\?>/g, "");
+    cleaned = cleaned.replace(/<!DOCTYPE[\s\S]*?>/gi, "");
+    cleaned = cleaned.replace(/<image\b[^>]*\/>/gi, "");
+    cleaned = cleaned.replace(/<image\b[\s\S]*?<\/image>/gi, "");
+    cleaned = cleaned.replace(/<image\b[^>]*>/gi, "");
+    var imgsRemoved = (text.match(/<image\b/gi) || []).length;
+    if (imgsRemoved > 0) {
+      console.log("[converter] stripped " + imgsRemoved + " <image> tag(s) from SVG (canvas-taint prevention)");
+    }
+    state.svgText = cleaned;
+    preview.innerHTML = cleaned;
+    preview.classList.remove("hidden");
+    var svg = preview.querySelector("svg");
+    if (!svg) {
+      showErr("upload-err", "No <svg> root element found in file.");
+      return;
+    }
+    state.svgEl = svg;
+    var vbAttr = svg.getAttribute("viewBox");
+    var w, h;
+    if (vbAttr) {
+      var parts = vbAttr.split(/\s+|,/).map(parseFloat);
+      w = parts[2]; h = parts[3];
+    } else {
+      w = parseFloat(svg.getAttribute("width")) || 2646;
+      h = parseFloat(svg.getAttribute("height")) || 1871;
+    }
+    state.viewBox = { w: w, h: h };
+    console.log("[converter] viewBox:", w, "x", h);
+    if (!titleInput.value) {
+      var guess = file.name.replace(/\.svg$/i, "").replace(/[_-]+/g, " ");
+      titleInput.value = guess;
+      state.title = guess;
+    }
+    metaControls.classList.remove("hidden");
+    document.getElementById("stage-parse").classList.remove("hidden");
+    document.getElementById("stage-parse").scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+  reader.onerror = function(){
+    showErr("upload-err", "Could not read file.");
+  };
+  reader.readAsText(file);
+}
+
+// ---------- STAGE 2: DETECT ----------
+document.getElementById("run-parse").addEventListener("click", runDetection);
+
+function setStep(id, cls){
+  var el = document.getElementById("step-" + id);
+  if (el) el.className = "step " + cls;
+}
+
+function runDetection(){
+  var btn = document.getElementById("run-parse");
+  btn.disabled = true;
+  var prog = document.getElementById("progress");
+  prog.classList.remove("hidden");
+  prog.innerHTML = "";
+  var steps = [
+    ["geom","Detecting shapes from SVG geometry"],
+    ["render","Rendering SVG to high-DPI canvas"],
+    ["ocr","Running OCR (this is the slow step)"],
+    ["match","Matching text to shapes"],
+    ["lanes","Assigning shapes to swim lanes"]
+  ];
+  steps.forEach(function(s){
+    var d = document.createElement("div");
+    d.className = "step";
+    d.id = "step-" + s[0];
+    d.textContent = s[1];
+    prog.appendChild(d);
+  });
+
+  setTimeout(function(){
+    try {
+      setStep("geom","active");
+      detectGeometry();
+      setStep("geom","done");
+
+      setStep("render","active");
+      // Adaptive scale: aim for high DPI but cap canvas dimension at 4000px to avoid browser limits
+      var maxDim = Math.max(state.viewBox.w, state.viewBox.h);
+      var scale = Math.min(2.5, 4000 / maxDim);
+      if (scale < 1.0) scale = 1.0;
+      console.log("[converter] render scale:", scale);
+      renderSvgToCanvas(state.svgText, state.viewBox, scale).then(function(canvas){
+        setStep("render","done");
+        // PRE-OCR: extract native <text> elements directly from the SVG.
+        // Visio, draw.io, and hand-edited SVGs have real <text> tags with
+        // readable strings — far more reliable than OCR. Lucidchart SVGs
+        // typically don't have these (text is path-glyphs), so this step
+        // simply finds nothing and OCR proceeds as before.
+        var nativeLabels = extractNativeTextLabels(state.svgEl);
+        if (nativeLabels.length > 0) {
+          console.log("[converter] found " + nativeLabels.length + " native <text> labels — using them directly");
+          // Match these immediately. OCR runs anyway and adds anything missed.
+          matchLabelClustersToShapes(nativeLabels);
+        }
+        setStep("ocr","active");
+        return runOCR(canvas).then(function(words){
+          setStep("ocr","done");
+          setStep("match","active");
+          matchTextToShapes(words, canvas, state.viewBox);
+          setStep("match","done");
+          setStep("lanes","active");
+          assignLanes();
+          setStep("lanes","done");
+          finishDetection();
+        });
+      }).catch(function(err){
+        console.error(err);
+        var e = document.createElement("div");
+        e.className = "err";
+        e.textContent = "Detection failed: " + err.message;
+        prog.appendChild(e);
+        btn.disabled = false;
+      });
+    } catch (err) {
+      console.error(err);
+      var e = document.createElement("div");
+      e.className = "err";
+      e.textContent = "Detection failed: " + err.message;
+      prog.appendChild(e);
+      btn.disabled = false;
+    }
+  }, 50);
+}
+
+function finishDetection(){
+  document.getElementById("n-lanes").textContent = state.lanes.length;
+  document.getElementById("n-tasks").textContent = state.tasks.length;
+  document.getElementById("n-events").textContent = state.events.length;
+  document.getElementById("n-gateways").textContent = state.gateways.length;
+  document.getElementById("summary").classList.remove("hidden");
+  buildReviewTables();
+  document.getElementById("stage-review").classList.remove("hidden");
+  document.getElementById("stage-generate").classList.remove("hidden");
+  document.getElementById("stage-review").scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function detectGeometry(){
+  state.lanes = []; state.tasks = []; state.events = []; state.gateways = [];
+  var svg = state.svgEl;
+  var fullW = state.viewBox.w, fullH = state.viewBox.h;
+  var cands = [];
+  svg.querySelectorAll("path, rect, circle, ellipse, polygon").forEach(function(el){
+    try {
+      var bb = el.getBBox();
+      if (bb.width < 8 || bb.height < 8) return;
+      if (bb.width > fullW * 1.05 || bb.height > fullH * 1.05) return;
+      cands.push({ el: el, bb: bb });
+    } catch(e) {}
+  });
+  console.log("[converter] geometry: " + cands.length + " candidates");
+
+  // Lanes
+  var laneRaw = cands.filter(function(c){
+    var ar = c.bb.width / c.bb.height;
+    return c.bb.width > fullW * 0.7 && c.bb.height > 60 && c.bb.height < fullH * 0.5 && ar > 2.5;
+  });
+  var seen = [];
+  laneRaw.forEach(function(c){
+    var cy = c.bb.y + c.bb.height / 2;
+    if (seen.some(function(s){ return Math.abs(s - cy) < 30; })) return;
+    seen.push(cy);
+    state.lanes.push({
+      id: "lane-" + state.lanes.length,
+      label: "", sub: "",
+      x1: c.bb.x, y1: c.bb.y,
+      x2: c.bb.x + c.bb.width, y2: c.bb.y + c.bb.height
+    });
+  });
+  state.lanes.sort(function(a,b){ return a.y1 - b.y1; });
+
+  var used = [];
+  function isUsed(el){ return used.indexOf(el) !== -1; }
+
+  // Tasks
+  cands.forEach(function(c){
+    if (isUsed(c.el)) return;
+    var w = c.bb.width, h = c.bb.height;
+    if (w < 100 || w > 400 || h < 60 || h > 180) return;
+    var ar = w / h;
+    if (ar < 1.2 || ar > 3.5) return;
+    var ok = false;
+    var tag = c.el.tagName.toLowerCase();
+    if (tag === "rect") {
+      if (parseFloat(c.el.getAttribute("rx") || "0") >= 6) ok = true;
+    } else if (tag === "path") {
+      var d = c.el.getAttribute("d") || "";
+      // Format A — Lucidchart's classic rounded-rect using arc commands:
+      //   "M x y a 12.8 12.8 0 0 1 ..." with 4 arcs of radius 10–15px
+      if (/a\s*1[0-5](\.\d+)?[\s,]+1[0-5](\.\d+)?/.test(d)) {
+        var arcs = (d.match(/[aA]\s*1[0-5]/g) || []).length;
+        if (arcs >= 3) ok = true;
+      }
+      // Format B — Lucidchart's alternative rounded-rect using cubic-bezier corners:
+      //   "M x y h{w} c... v{h} c... h-{w} c... v-{h} c... z"
+      // Has 4 cubic curves AND both h and v line commands AND closes with z.
+      if (!ok) {
+        var hasZ = /z\s*$/i.test(d.trim());
+        var hasH = /[hH]\s*-?[\d.]/.test(d);
+        var hasV = /[vV]\s*-?[\d.]/.test(d);
+        var cubicCount = (d.match(/[cC]\s*-?[\d.]/g) || []).length;
+        if (hasZ && hasH && hasV && cubicCount >= 3) ok = true;
+      }
+    }
+    if (!ok) return;
+    if (state.tasks.some(function(t){ return Math.abs(t.x - c.bb.x) < 4 && Math.abs(t.y - c.bb.y) < 4; })) return;
+    state.tasks.push({ id: "task-" + state.tasks.length, label: "", x: c.bb.x, y: c.bb.y, w: w, h: h, lane: "" });
+    used.push(c.el);
+  });
+
+  // Events
+  // We collect ALL circle-like shapes first, then group concentric ones (Start/End/Intermediate variants).
+  var circleCandidates = [];
+  cands.forEach(function(c){
+    if (isUsed(c.el)) return;
+    var w = c.bb.width, h = c.bb.height;
+    var ar = w / h;
+    // Widened size range: down to 25px to catch thin-stroke Start events whose
+    // bbox is smaller than typical events (no thick stroke padding the bbox).
+    if (w < 25 || w > 95 || ar < 0.80 || ar > 1.20) return;
+    var tag = c.el.tagName.toLowerCase();
+    var isCirc = false;
+    if (tag === "circle" || tag === "ellipse") {
+      isCirc = true;
+    } else if (tag === "path") {
+      var d = c.el.getAttribute("d") || "";
+      // A circle in BPMN export is a closed path with cubic-bezier curves (c/C/s/S commands).
+      // Lucidchart packs the whole circle into a single 'c' command with implicit continuation.
+      // Detect by: has at least one curve command, AND no horizontal/vertical line commands
+      // (rect-like wrapper paths use h/v which real circles never do).
+      var hasCurve = /[csCS]/.test(d);
+      var arcMatches = d.match(/[aA]\s*([\d.]+)/g) || [];
+      var hasBigArc = arcMatches.some(function(m){
+        var r = parseFloat(m.replace(/[aA]\s*/, ""));
+        return r > 5;
+      });
+      var hasHVcommands = /[hHvV]/.test(d);
+      if ((hasCurve || hasBigArc) && !hasHVcommands && w >= 25) {
+        isCirc = true;
+      }
+    }
+    if (!isCirc) return;
+    var stroke = parseFloat(c.el.getAttribute("stroke-width") || "1");
+    circleCandidates.push({
+      el: c.el, bb: c.bb, w: w, h: h, stroke: stroke,
+      cx: c.bb.x + w/2, cy: c.bb.y + h/2
+    });
+  });
+
+  // Group concentric circles. Two circles are concentric if their centers are within 8px.
+  var groups = [];
+  circleCandidates.forEach(function(cc){
+    var g = groups.find(function(g){
+      return Math.abs(g.cx - cc.cx) < 8 && Math.abs(g.cy - cc.cy) < 8;
+    });
+    if (g) {
+      g.members.push(cc);
+      // Outer circle = larger bbox; inner = smaller
+      if (cc.w > g.outerW) g.outerW = cc.w;
+    } else {
+      groups.push({ cx: cc.cx, cy: cc.cy, members: [cc], outerW: cc.w });
+    }
+  });
+
+  groups.forEach(function(g){
+    var memberCount = g.members.length;
+    var maxStroke = Math.max.apply(null, g.members.map(function(m){ return m.stroke; }));
+    // Type heuristics:
+    //  - 1 circle, thin stroke      → Start Event (will be reclassified by position below)
+    //  - 1 circle, thick stroke     → End Event
+    //  - 2 concentric circles       → Intermediate Event
+    //  - 3 concentric circles       → End Event with marker (treat as End)
+    var type;
+    if (memberCount >= 2) {
+      type = "Intermediate Event";
+    } else if (maxStroke > 3) {
+      type = "End Event";
+    } else {
+      type = "Start Event";
+    }
+    // Use the OUTER bbox for hit area (largest member)
+    var outer = g.members.reduce(function(a, b){ return a.w >= b.w ? a : b; });
+    state.events.push({
+      id: "event-" + state.events.length,
+      label: "", sub: "",
+      x: outer.bb.x, y: outer.bb.y, r: outer.w,
+      cx: g.cx, cy: g.cy,
+      type: type
+    });
+    g.members.forEach(function(m){ used.push(m.el); });
+  });
+
+  // FALLBACK PASS for missed Start events.
+  // Start events have the thinnest stroke and smallest bbox — they slip through
+  // the main filter most often. Re-scan with looser rules: any unused path that
+  // is roughly square, has curve commands, no h/v lines, and sits at the left
+  // edge of any lane (typical Start position).
+  cands.forEach(function(c){
+    if (isUsed(c.el)) return;
+    var w = c.bb.width, h = c.bb.height;
+    var ar = w / h;
+    if (w < 20 || w > 100 || ar < 0.75 || ar > 1.25) return;
+    var tag = c.el.tagName.toLowerCase();
+    var ok = (tag === "circle" || tag === "ellipse");
+    if (tag === "path") {
+      var d = c.el.getAttribute("d") || "";
+      if (/[csCS]/.test(d) && !/[hHvV]/.test(d)) ok = true;
+    }
+    if (!ok) return;
+    var cx = c.bb.x + w/2;
+    var cy = c.bb.y + h/2;
+    // Don't add if there's already an event at this position (within 10px)
+    if (state.events.some(function(e){ return Math.abs(e.cx - cx) < 10 && Math.abs(e.cy - cy) < 10; })) return;
+    var stroke = parseFloat(c.el.getAttribute("stroke-width") || "1");
+    state.events.push({
+      id: "event-" + state.events.length,
+      label: "", sub: "",
+      x: c.bb.x, y: c.bb.y, r: w,
+      cx: cx, cy: cy,
+      type: stroke > 2.5 ? "End Event" : "Start Event"
+    });
+    used.push(c.el);
+    console.log("[converter] fallback pass found event at (" + cx.toFixed(0) + "," + cy.toFixed(0) + ") size=" + w.toFixed(0) + " stroke=" + stroke);
+  });
+
+  // Reclassify by position: leftmost event = Start, rightmost event = End.
+  // This overrides geometry-based typing because position is more reliable for BPMN.
+  if (state.events.length > 0) {
+    var byX = state.events.slice().sort(function(a,b){ return a.x - b.x; });
+    byX[0].type = "Start Event";
+    if (byX.length > 1) {
+      byX[byX.length - 1].type = "End Event";
+    }
+  }
+
+  // Gateways
+  cands.forEach(function(c){
+    if (isUsed(c.el)) return;
+    var w = c.bb.width, h = c.bb.height;
+    var ar = w / h;
+    if (w < 60 || w > 160 || ar < 1.1 || ar > 2.0) return;
+    var tag = c.el.tagName.toLowerCase();
+    if (tag === "path") {
+      var d = c.el.getAttribute("d") || "";
+      if (/a\s*1\.22/i.test(d)) {
+        if (state.gateways.some(function(g){ return Math.abs(g.cx - (c.bb.x + w/2)) < 8; })) return;
+        state.gateways.push({
+          id: "gateway-" + state.gateways.length,
+          label: "", sub: "",
+          cx: c.bb.x + w/2, cy: c.bb.y + h/2,
+          bbox: { x: c.bb.x, y: c.bb.y, w: w, h: h },
+          type: "Exclusive Gateway (XOR)"
+        });
+        used.push(c.el);
+      }
+    } else if (tag === "polygon") {
+      var pts = (c.el.getAttribute("points") || "").trim().split(/\s+/);
+      if (pts.length === 4) {
+        state.gateways.push({
+          id: "gateway-" + state.gateways.length,
+          label: "", sub: "",
+          cx: c.bb.x + w/2, cy: c.bb.y + h/2,
+          bbox: { x: c.bb.x, y: c.bb.y, w: w, h: h },
+          type: "Exclusive Gateway (XOR)"
+        });
+        used.push(c.el);
+      }
+    }
+  });
+}
+
+function renderSvgToCanvas(svgText, vb, scale){
+  return new Promise(function(resolve, reject){
+    var canvas = document.getElementById("ocr-canvas");
+    canvas.width = Math.round(vb.w * scale);
+    canvas.height = Math.round(vb.h * scale);
+    var ctx = canvas.getContext("2d");
+    ctx.fillStyle = "#fff";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Clean the SVG text aggressively — these are common culprits that make
+    // browsers reject the markup when loaded via <img>:
+    //   1. XML declaration / DOCTYPE / processing instructions
+    //   2. foreignObject with external HTML
+    //   3. external font @import / external image hrefs
+    //   4. inline scripts (some browsers refuse SVGs with scripts in img tags)
+    //   5. namespaced elements they don't know
+    var clean = svgText;
+    clean = clean.replace(/<\?xml[\s\S]*?\?>/g, "");
+    clean = clean.replace(/<!DOCTYPE[\s\S]*?>/gi, "");
+    clean = clean.replace(/<!--[\s\S]*?-->/g, "");
+    // Strip @import url(...) inside <style>
+    clean = clean.replace(/@import\s+url\([^)]*\)\s*;?/gi, "");
+    // Strip ALL <image> tags — including base64 data URLs. Even data-URL images
+    // can taint the canvas in some browsers, blocking OCR pixel reads.
+    // Handle both self-closing <image .../> and paired <image>...</image> forms.
+    clean = clean.replace(/<image\b[^>]*\/>/gi, "");
+    clean = clean.replace(/<image\b[\s\S]*?<\/image>/gi, "");
+    clean = clean.replace(/<image\b[^>]*>/gi, "");  // any orphans
+    // Strip script tags (build pattern via concat so HTML parser doesn't see the literal opener)
+    var scriptRe = new RegExp("<" + "script\\b[\\s\\S]*?<\\/" + "script>", "gi");
+    clean = clean.replace(scriptRe, "");
+    if (!/xmlns=/.test(clean)) {
+      clean = clean.replace("<svg", '<svg xmlns="http://www.w3.org/2000/svg"');
+    }
+
+    console.log("[converter] cleaned SVG:", clean.length, "chars; original:", svgText.length);
+
+    function tryLoad(svgString, attemptName){
+      return new Promise(function(res, rej){
+        var blob = new Blob([svgString], { type: "image/svg+xml;charset=utf-8" });
+        var url = URL.createObjectURL(blob);
+        var img = new Image();
+        var done = false;
+        img.onload = function(){
+          if (done) return;
+          done = true;
+          try {
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+          } catch(e) {
+            URL.revokeObjectURL(url);
+            rej(new Error("drawImage failed: " + e.message));
+            return;
+          }
+          URL.revokeObjectURL(url);
+          console.log("[converter] rasterize OK via", attemptName);
+          res(canvas);
+        };
+        img.onerror = function(e){
+          if (done) return;
+          done = true;
+          URL.revokeObjectURL(url);
+          rej(new Error(attemptName + " failed"));
+        };
+        img.src = url;
+        // Timeout safety
+        setTimeout(function(){
+          if (done) return;
+          done = true;
+          URL.revokeObjectURL(url);
+          rej(new Error(attemptName + " timed out (15s)"));
+        }, 15000);
+      });
+    }
+
+    // Attempt 1: cleaned text-based blob
+    tryLoad(clean, "blob-direct").then(resolve).catch(function(err1){
+      console.warn("[converter] attempt 1 failed:", err1.message);
+      // Attempt 2: re-serialize the already-parsed DOM SVG with XMLSerializer
+      try {
+        var serialized = new XMLSerializer().serializeToString(state.svgEl);
+        // Wrap if needed
+        if (!/xmlns=/.test(serialized)) {
+          serialized = serialized.replace("<svg", '<svg xmlns="http://www.w3.org/2000/svg"');
+        }
+        // Strip external refs and scripts again
+        serialized = serialized.replace(/@import\s+url\([^)]*\)\s*;?/gi, "");
+        serialized = serialized.replace(scriptRe, "");
+        tryLoad(serialized, "xmlserializer").then(resolve).catch(function(err2){
+          console.warn("[converter] attempt 2 failed:", err2.message);
+          // Attempt 3: data URL instead of blob URL (sometimes works when blobs are blocked)
+          var encoded = encodeURIComponent(clean);
+          var dataUrl = "data:image/svg+xml;charset=utf-8," + encoded;
+          var img3 = new Image();
+          var done3 = false;
+          img3.onload = function(){
+            if (done3) return; done3 = true;
+            try {
+              ctx.drawImage(img3, 0, 0, canvas.width, canvas.height);
+              console.log("[converter] rasterize OK via data-url");
+              resolve(canvas);
+            } catch(e) {
+              reject(new Error("All rasterize attempts failed. Last error: drawImage: " + e.message));
+            }
+          };
+          img3.onerror = function(){
+            if (done3) return; done3 = true;
+            reject(new Error(
+              "Could not rasterize SVG. The browser refuses to load this SVG markup as an image. " +
+              "This is usually caused by external resources in the SVG (fonts, images) that the browser blocks for security. " +
+              "Try opening the SVG in a text editor and removing any <image href=\"http...\"> or @import references, then re-upload."
+            ));
+          };
+          setTimeout(function(){
+            if (done3) return; done3 = true;
+            reject(new Error("All rasterize attempts timed out."));
+          }, 15000);
+          img3.src = dataUrl;
+        });
+      } catch(e) {
+        reject(new Error("Could not rasterize SVG: " + err1.message + " (and serializer failed: " + e.message + ")"));
+      }
+    });
+  });
+}
+
+function runOCR(canvas){
+  if (typeof Tesseract === "undefined") {
+    return Promise.reject(new Error("Tesseract.js failed to load. Check your internet connection."));
+  }
+  var stepEl = document.getElementById("step-ocr");
+  return Tesseract.recognize(canvas, "eng", {
+    logger: function(m){
+      if (m.status === "recognizing text" && m.progress) {
+        stepEl.textContent = "Running OCR — " + Math.round(m.progress * 100) + "%";
+      } else if (m.status) {
+        stepEl.textContent = "OCR — " + m.status;
+      }
+    }
+  }).then(function(result){
+    stepEl.textContent = "Running OCR (this is the slow step)";
+    var words = (result.data.words || []).map(function(w){
+      return {
+        text: w.text.trim(),
+        x0: w.bbox.x0, y0: w.bbox.y0,
+        x1: w.bbox.x1, y1: w.bbox.y1,
+        conf: w.confidence
+      };
+    }).filter(function(w){ return w.text.length > 0 && w.conf > 30; });
+    return words;
+  });
+}
+
+// Lane header text is rendered ROTATED 90° in BPMN diagrams (vertical text reading bottom-to-top).
+// OCR can't read rotated text, so we crop each lane header strip, rotate it 90° CW into a new canvas,
+// then OCR each one separately and assign the result to the lane.
+function readLaneHeadersOCR(srcCanvas, vb){
+  if (typeof Tesseract === "undefined") return Promise.resolve();
+  if (state.lanes.length === 0) return Promise.resolve();
+
+  // Lane header strip = leftmost ~80px of each lane band (in SVG coords)
+  // In canvas coords that's: (0, lane.y1 * scaleY) to (80 * scaleX, lane.y2 * scaleY)
+  var scaleX = srcCanvas.width / vb.w;
+  var scaleY = srcCanvas.height / vb.h;
+  var headerSvgWidth = Math.max(80, vb.w * 0.045); // be generous with width
+
+  var lanesToRead = state.lanes.map(function(l){
+    return {
+      lane: l,
+      sx: 0,
+      sy: l.y1 * scaleY,
+      sw: headerSvgWidth * scaleX,
+      sh: (l.y2 - l.y1) * scaleY
+    };
+  });
+
+  console.log("[converter] reading " + lanesToRead.length + " lane headers (rotated OCR)");
+
+  // Clear any garbage from the main (horizontal) OCR pass that assigned bad text to lanes.
+  // The rotated OCR is more authoritative for lane labels.
+  state.lanes.forEach(function(l){ l.label = ""; l.sub = ""; });
+
+  // Process sequentially to avoid hammering Tesseract
+  var stepEl = document.getElementById("step-match");
+  var p = Promise.resolve();
+  lanesToRead.forEach(function(item, idx){
+    p = p.then(function(){
+      stepEl.textContent = "Reading lane header " + (idx+1) + "/" + lanesToRead.length;
+      return ocrRotatedRegion(srcCanvas, item.sx, item.sy, item.sw, item.sh).then(function(text){
+        var clean = (text || "").replace(/[^\w\s\-&,.]/g, "").replace(/\s+/g, " ").trim();
+        console.log("[converter] lane " + idx + " header OCR:", JSON.stringify(text), "→", JSON.stringify(clean));
+        if (clean) {
+          // Heuristic: if multiple lines, first is label and rest is sub
+          var parts = clean.split(/\s{2,}|\n/).map(function(s){ return s.trim(); }).filter(Boolean);
+          if (parts.length >= 2) {
+            item.lane.label = parts[0];
+            item.lane.sub = parts.slice(1).join(" ");
+          } else {
+            // Heuristic split: if a single string contains both role + description,
+            // try to split where capitalization suggests a new sentence.
+            // Otherwise put it all in label.
+            item.lane.label = clean;
+          }
+        }
+      });
+    });
+  });
+  return p;
+}
+
+function ocrRotatedRegion(srcCanvas, sx, sy, sw, sh){
+  return new Promise(function(resolve, reject){
+    sx = Math.max(0, Math.floor(sx));
+    sy = Math.max(0, Math.floor(sy));
+    sw = Math.min(srcCanvas.width - sx, Math.floor(sw));
+    sh = Math.min(srcCanvas.height - sy, Math.floor(sh));
+    if (sw <= 0 || sh <= 0) { resolve(""); return; }
+
+    // Create a new canvas with rotated dimensions: original width becomes height, height becomes width.
+    // We rotate 90° counter-clockwise so vertical bottom-to-top text becomes horizontal left-to-right.
+    var rot = document.createElement("canvas");
+    rot.width = sh;
+    rot.height = sw;
+    var rctx = rot.getContext("2d");
+    rctx.fillStyle = "#fff";
+    rctx.fillRect(0, 0, rot.width, rot.height);
+
+    // For 90° CCW rotation: translate to bottom-left of new canvas, rotate -90°, then draw the source region
+    rctx.save();
+    rctx.translate(0, rot.height);
+    rctx.rotate(-Math.PI / 2);
+    rctx.drawImage(srcCanvas, sx, sy, sw, sh, 0, 0, sw, sh);
+    rctx.restore();
+
+    Tesseract.recognize(rot, "eng", { logger: function(){} }).then(function(result){
+      resolve(result.data.text || "");
+    }).catch(function(err){
+      console.warn("[converter] rotated OCR failed:", err);
+      resolve("");
+    });
+  });
+}
+
+function clusterWordsToLabels(words){
+  var sorted = words.slice().sort(function(a,b){ return a.y0 - b.y0 || a.x0 - b.x0; });
+  var used = {};
+  var clusters = [];
+  for (var i = 0; i < sorted.length; i++) {
+    if (used[i]) continue;
+    var seed = sorted[i];
+    var cluster = [seed];
+    used[i] = true;
+    var lineH = seed.y1 - seed.y0;
+    var maxX = seed.x1, minX = seed.x0;
+    var avgY = (seed.y0 + seed.y1) / 2;
+    for (var j = i + 1; j < sorted.length; j++) {
+      if (used[j]) continue;
+      var w = sorted[j];
+      var wAvgY = (w.y0 + w.y1) / 2;
+      if (Math.abs(wAvgY - avgY) <= lineH * 1.4) {
+        if (w.x0 - maxX < lineH * 3 && w.x1 - minX > -lineH * 3) {
+          cluster.push(w);
+          used[j] = true;
+          maxX = Math.max(maxX, w.x1);
+          minX = Math.min(minX, w.x0);
+          avgY = (avgY + wAvgY) / 2;
+        }
+      }
+    }
+    cluster.sort(function(a,b){ return a.x0 - b.x0; });
+    var text = cluster.map(function(c){ return c.text; }).join(" ");
+    var cx = 0, cy = 0;
+    cluster.forEach(function(c){ cx += (c.x0 + c.x1)/2; cy += (c.y0 + c.y1)/2; });
+    cx /= cluster.length; cy /= cluster.length;
+    clusters.push({
+      text: text, cx: cx, cy: cy,
+      x0: minX, y0: cluster[0].y0,
+      x1: maxX, y1: cluster[cluster.length-1].y1
+    });
+  }
+  return clusters;
+}
+
+// Walk the SVG DOM for <text> elements and return label clusters in viewBox coords.
+// Each <text> element may have multiple <tspan>s — concatenate their text.
+function extractNativeTextLabels(svgEl){
+  var labels = [];
+  var textEls = svgEl.querySelectorAll("text");
+  textEls.forEach(function(el){
+    var txt = (el.textContent || "").replace(/\s+/g, " ").trim();
+    if (!txt) return;
+    var bb;
+    try { bb = el.getBBox(); }
+    catch(e){ return; }
+    if (bb.width <= 0 || bb.height <= 0) return;
+    labels.push({
+      text: txt,
+      x0: bb.x, y0: bb.y,
+      x1: bb.x + bb.width, y1: bb.y + bb.height,
+      cx: bb.x + bb.width / 2,
+      cy: bb.y + bb.height / 2
+    });
+  });
+  return labels;
+}
+
+// Take pre-clustered labels (already in viewBox coords) and assign them to
+// the best-fit shape using the same priority as matchTextToShapes:
+//   task containment → lane header zone → near event → near gateway.
+function matchLabelClustersToShapes(labels){
+  labels.forEach(function(lbl){
+    var lx = lbl.cx, ly = lbl.cy;
+
+    // 1. Inside a task?
+    var t = state.tasks.find(function(t){
+      return lx >= t.x && lx <= t.x + t.w && ly >= t.y && ly <= t.y + t.h;
+    });
+    if (t) {
+      t.label = (t.label ? t.label + " " : "") + lbl.text;
+      return;
+    }
+
+    // 2. Lane header zone (left edge)
+    var inLane = state.lanes.find(function(l){ return ly >= l.y1 && ly <= l.y2; });
+    if (inLane && lx < state.viewBox.w * 0.08) {
+      if (inLane.label && lbl.text.length > inLane.label.length * 1.5) inLane.sub = lbl.text;
+      else if (!inLane.label) inLane.label = lbl.text;
+      else inLane.sub = (inLane.sub ? inLane.sub + " " : "") + lbl.text;
+      return;
+    }
+
+    // 3. Near an event (label below)
+    var nearEv = nearestShape(state.events, lx, ly, 80, function(e){
+      return { x: e.x, y: e.y, w: e.r, h: e.r };
+    });
+    if (nearEv && ly > nearEv.y + nearEv.r * 0.5) {
+      if (!nearEv.label) nearEv.label = lbl.text;
+      else if (!nearEv.sub) nearEv.sub = lbl.text;
+      else nearEv.sub += " " + lbl.text;
+      return;
+    }
+
+    // 4. Near a gateway
+    var nearGw = nearestShape(state.gateways, lx, ly, 100, function(g){
+      return { x: g.bbox.x, y: g.bbox.y, w: g.bbox.w, h: g.bbox.h };
+    });
+    if (nearGw) {
+      if (!nearGw.label) nearGw.label = lbl.text;
+      else if (!nearGw.sub) nearGw.sub = lbl.text;
+      else nearGw.sub += " " + lbl.text;
+      return;
+    }
+  });
+
+  // Tidy whitespace
+  [state.tasks, state.events, state.gateways, state.lanes].forEach(function(arr){
+    arr.forEach(function(o){
+      if (o.label) o.label = o.label.replace(/\s+/g, " ").trim();
+      if (o.sub) o.sub = o.sub.replace(/\s+/g, " ").trim();
+    });
+  });
+}
+
+function matchTextToShapes(words, canvas, vb){
+  var sx = vb.w / canvas.width;
+  var sy = vb.h / canvas.height;
+  var ws = words.map(function(w){
+    return {
+      text: w.text,
+      x0: w.x0 * sx, y0: w.y0 * sy,
+      x1: w.x1 * sx, y1: w.y1 * sy,
+      cx: (w.x0 + w.x1) / 2 * sx,
+      cy: (w.y0 + w.y1) / 2 * sy
+    };
+  });
+  var labels = clusterWordsToLabels(ws);
+  console.log("[converter] " + labels.length + " label clusters");
+
+  labels.forEach(function(lbl){
+    var lx = lbl.cx, ly = lbl.cy;
+
+    var t = state.tasks.find(function(t){ return lx >= t.x && lx <= t.x + t.w && ly >= t.y && ly <= t.y + t.h; });
+    if (t) { t.label = (t.label ? t.label + " " : "") + lbl.text; return; }
+
+    var inLane = state.lanes.find(function(l){ return ly >= l.y1 && ly <= l.y2; });
+    if (inLane && lx < state.viewBox.w * 0.08) {
+      if (inLane.label && lbl.text.length > inLane.label.length * 1.5) inLane.sub = lbl.text;
+      else if (!inLane.label) inLane.label = lbl.text;
+      else inLane.sub = (inLane.sub ? inLane.sub + " " : "") + lbl.text;
+      return;
+    }
+
+    var nearEv = nearestShape(state.events, lx, ly, 80, function(e){ return { x: e.x, y: e.y, w: e.r, h: e.r }; });
+    if (nearEv && ly > nearEv.y + nearEv.r * 0.5) {
+      if (!nearEv.label) nearEv.label = lbl.text;
+      else if (!nearEv.sub) nearEv.sub = lbl.text;
+      else nearEv.sub += " " + lbl.text;
+      return;
+    }
+
+    var nearGw = nearestShape(state.gateways, lx, ly, 100, function(g){ return { x: g.bbox.x, y: g.bbox.y, w: g.bbox.w, h: g.bbox.h }; });
+    if (nearGw) {
+      if (!nearGw.label) nearGw.label = lbl.text;
+      else if (!nearGw.sub) nearGw.sub = lbl.text;
+      else nearGw.sub += " " + lbl.text;
+      return;
+    }
+  });
+
+  [state.tasks, state.events, state.gateways, state.lanes].forEach(function(arr){
+    arr.forEach(function(o){
+      if (o.label) o.label = o.label.replace(/\s+/g, " ").trim();
+      if (o.sub) o.sub = o.sub.replace(/\s+/g, " ").trim();
+    });
+  });
+}
+
+function nearestShape(arr, x, y, maxD, bbFn){
+  var best = null, bd = Infinity;
+  arr.forEach(function(s){
+    var bb = bbFn(s);
+    var cx = bb.x + bb.w/2, cy = bb.y + bb.h/2;
+    var d = Math.sqrt((cx-x)*(cx-x) + (cy-y)*(cy-y));
+    if (d < bd && d < maxD) { best = s; bd = d; }
+  });
+  return best;
+}
+
+function assignLanes(){
+  function laneOf(y){
+    var l = state.lanes.find(function(l){ return y >= l.y1 && y <= l.y2; });
+    return l ? (l.label || ("Lane " + (state.lanes.indexOf(l) + 1))) : "";
+  }
+  state.tasks.forEach(function(t){ t.lane = laneOf(t.y + t.h/2); });
+  state.events.forEach(function(e){ e.lane = laneOf(e.y + e.r/2); });
+  state.gateways.forEach(function(g){ g.lane = laneOf(g.cy); });
+}
+
+// ---------- STAGE 3: REVIEW ----------
+function buildReviewTables(){
+  var c = document.getElementById("edit-tables");
+  c.innerHTML = "";
+  var sections = [
+    { key: "lanes", title: "Lanes", badge: "b-lane", cols: ["Label","Sub-description"] },
+    { key: "tasks", title: "Tasks", badge: "b-task", cols: ["Label","Lane"] },
+    { key: "events", title: "Events", badge: "b-event", cols: ["Label","Sub-description","Type"] },
+    { key: "gateways", title: "Gateways", badge: "b-gateway", cols: ["Label","Sub-description","Type"] }
+  ];
+  sections.forEach(function(sec){
+    var items = state[sec.key];
+    if (items.length === 0) return;
+    var wrap = document.createElement("div");
+    wrap.style.marginBottom = "24px";
+    var h = document.createElement("h3");
+    h.style.cssText = "font-size:12px;font-weight:600;margin-bottom:6px;color:#374151;display:flex;align-items:center;gap:8px;";
+    var b = document.createElement("span");
+    b.className = "badge " + sec.badge;
+    b.textContent = sec.title;
+    var n = document.createElement("span");
+    n.style.cssText = "color:var(--muted);font-weight:400;";
+    n.textContent = items.length + " detected";
+    h.appendChild(b); h.appendChild(n);
+    wrap.appendChild(h);
+    var tbl = document.createElement("table");
+    tbl.className = "edit-table";
+    var thead = document.createElement("thead");
+    var tr = document.createElement("tr");
+    sec.cols.forEach(function(col){
+      var th = document.createElement("th");
+      th.textContent = col;
+      tr.appendChild(th);
+    });
+    thead.appendChild(tr);
+    tbl.appendChild(thead);
+    var tb = document.createElement("tbody");
+    items.forEach(function(item){
+      var r = document.createElement("tr");
+      sec.cols.forEach(function(col){
+        var td = document.createElement("td");
+        var inp = document.createElement("input");
+        inp.type = "text";
+        var f = col === "Label" ? "label" :
+                col === "Sub-description" ? "sub" :
+                col === "Lane" ? "lane" :
+                col === "Type" ? "type" : "";
+        inp.value = item[f] || "";
+        inp.addEventListener("input", function(e){ item[f] = e.target.value; });
+        td.appendChild(inp);
+        r.appendChild(td);
+      });
+      tb.appendChild(r);
+    });
+    tbl.appendChild(tb);
+    wrap.appendChild(tbl);
+    c.appendChild(wrap);
+  });
+}
+
+// ---------- STAGE 4: GENERATE ----------
+document.getElementById("run-generate").addEventListener("click", function(){
+  try {
+    var html = buildOutputHtml();
+    var blob = new Blob([html], { type: "text/html" });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement("a");
+    a.href = url;
+    a.download = (state.code + "_" + (state.title || "process_map")).replace(/[^a-z0-9_-]+/gi, "_") + ".html";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  } catch (err) {
+    console.error(err);
+    alert("Generation failed: " + err.message);
+  }
+});
+
+function buildOutputHtml(){
+  // Decode the embedded template
+  var b64 = document.getElementById("output-template-store").getAttribute("data-tpl");
+  var tpl = atob(b64);
+
+  // Build JSON payload for the data block
+  var payload = {
+    svgW: state.viewBox.w,
+    svgH: state.viewBox.h,
+    lanes: state.lanes.map(function(l){
+      return { id: l.id, label: l.label, sub: l.sub, x1: l.x1, y1: l.y1, x2: l.x2, y2: l.y2 };
+    }),
+    tasks: state.tasks.map(function(t){
+      return { id: t.id, label: t.label, x: t.x, y: t.y, w: t.w, h: t.h, lane: t.lane };
+    }),
+    events: state.events.map(function(e){
+      return { id: e.id, label: e.label, sub: e.sub, x: e.x, y: e.y, r: e.r, type: e.type, lane: e.lane };
+    }),
+    gateways: state.gateways.map(function(g){
+      return { id: g.id, label: g.label, sub: g.sub, cx: g.cx, cy: g.cy, type: g.type, bbox: g.bbox, lane: g.lane };
+    })
+  };
+
+  // JSON embedded as data block in the output. Escape any literal closing-script-tag inside the JSON.
+  var dataJson = JSON.stringify(payload).replace(/<\/script/gi, "<\\/script");
+
+  // SVG embedded directly into output HTML.
+  var svgRaw = state.svgText;
+  // Strip XML declaration if present (some browsers choke when it's not at start of file)
+  svgRaw = svgRaw.replace(/^\s*<\?xml[^?]*\?>/, "").trim();
+
+  var html = tpl
+    .replace(/__CODE__/g, escapeHtml(state.code))
+    .replace(/__TITLE__/g, escapeHtml(state.title))
+    .replace(/__DATA_JSON__/g, dataJson)
+    .replace(/__SVG_RAW__/g, svgRaw);
+  return html;
+}
+
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g, function(c){
+    return { "&":"&amp;", "<":"&lt;", ">":"&gt;", "\"":"&quot;", "'":"&#39;" }[c];
+  });
+}
+
+console.log("[converter] script ready");
+</script>
+</body>
+</html>
