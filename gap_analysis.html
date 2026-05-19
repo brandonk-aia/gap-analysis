@@ -1867,7 +1867,7 @@
                 const totalGaps = procs.reduce((n, p) => n + (state.responses[p.id]?.gaps?.length || 0), 0);
                 html += `<div class="summary-dept-section">
                     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
-                        <div class="summary-dept-label" style="margin-bottom:0">${deptName}</div>
+                        <div class="summary-dept-label" style="font-size: 20px; margin-bottom:0">${deptName}</div>
                         ${totalGaps ? `<span class="badge badge-green">${totalGaps} gap${totalGaps !== 1 ? 's' : ''} total</span>` : `<span class="badge badge-grey">No data submitted</span>`}
                     </div>`;
                 procs.forEach(p => {
