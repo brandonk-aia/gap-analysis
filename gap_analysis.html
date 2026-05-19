@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -845,6 +845,48 @@
             margin-bottom: 5px
         }
 
+        .summary-view-toggle {
+            display: flex;
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 3px;
+            gap: 3px;
+            width: fit-content;
+            margin-bottom: 20px
+        }
+
+        .summary-view-btn {
+            padding: 6px 18px;
+            border-radius: 6px;
+            border: none;
+            background: transparent;
+            font-family: inherit;
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text2);
+            cursor: pointer;
+            transition: background .15s, color .15s, box-shadow .15s
+        }
+
+        .summary-view-btn.active {
+            background: var(--surface);
+            color: var(--text);
+            box-shadow: var(--shadow)
+        }
+
+        .summary-dept-section {
+            margin-top: 28px;
+            padding-top: 24px;
+            border-top: 2px solid var(--border)
+        }
+
+        .summary-dept-section:first-child {
+            margin-top: 0;
+            padding-top: 0;
+            border-top: none
+        }
+
         .badge {
             display: inline-block;
             font-size: 11px;
@@ -1287,6 +1329,10 @@
                     <div class="page-sub">Review your responses below. You can go back to edit any process before
                         exporting.</div>
                 </div>
+                <div class="summary-view-toggle">
+                    <button class="summary-view-btn active" id="toggle-dept" onclick="setSummaryView('dept')">My Department</button>
+                    <button class="summary-view-btn" id="toggle-org" onclick="setSummaryView('org')">Entire Organisation</button>
+                </div>
                 <div class="export-card">
                     <div class="export-text">
                         <h3>Export your responses</h3>
@@ -1296,6 +1342,7 @@
                         <button class="btn btn-primary" onclick="exportXLSX()">Download XLSX</button>
                     </div>
                 </div>
+                
                 <div id="summary-body"></div>
                 <div style="margin-top:24px;display:flex;justify-content:flex-end">
                     <button id="clear-data-btn" class="btn btn-sm btn-ghost" onclick="clearAllData()"
@@ -1761,7 +1808,21 @@
         }
 
         // ─── SUMMARY ──────────────────────────────────────────────────────────────
+        let summaryView = 'dept';
+
+        function setSummaryView(v) {
+            summaryView = v;
+            document.getElementById('toggle-dept').classList.toggle('active', v === 'dept');
+            document.getElementById('toggle-org').classList.toggle('active', v === 'org');
+            renderSummary();
+        }
+
         function renderSummary() {
+            if (summaryView === 'org') { renderOrgSummary(); return; }
+            renderDeptSummary();
+        }
+
+        function renderDeptSummary() {
             if (!state.dept) return;
             const procs = PROCESSES[state.dept];
             let html = `<div class="summary-dept-label">${DEPT_LABELS[state.dept]}</div>`;
@@ -1794,6 +1855,50 @@
                     });
                 }
                 html += `</div><button class="btn btn-ghost btn-sm" onclick="openProc('${p.id}')" style="flex-shrink:0;margin-top:4px">Edit</button></div>`;
+            });
+            document.getElementById('summary-body').innerHTML = html;
+        }
+
+        function renderOrgSummary() {
+            let html = '';
+            Object.entries(DEPT_LABELS).forEach(([deptKey, deptName]) => {
+                const procs = PROCESSES[deptKey];
+                if (!procs) return;
+                const totalGaps = procs.reduce((n, p) => n + (state.responses[p.id]?.gaps?.length || 0), 0);
+                html += `<div class="summary-dept-section">
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+                        <div class="summary-dept-label" style="margin-bottom:0">${deptName}</div>
+                        ${totalGaps ? `<span class="badge badge-green">${totalGaps} gap${totalGaps !== 1 ? 's' : ''} total</span>` : `<span class="badge badge-grey">No data submitted</span>`}
+                    </div>`;
+                procs.forEach(p => {
+                    const allGaps = state.responses[p.id]?.gaps || [];
+                    html += `<div class="summary-proc-row">
+                        <div class="summary-proc-name"><span style="font-size:11px;color:var(--text3);display:block;margin-bottom:2px">${p.num}</span>${p.name}</div>
+                        <div class="summary-result">`;
+                    if (!allGaps.length) {
+                        html += `<span class="badge badge-grey">No gaps recorded</span>`;
+                    } else {
+                        html += `<span class="badge badge-green" style="margin-bottom:10px;display:inline-block">${allGaps.length} gap${allGaps.length !== 1 ? 's' : ''}</span>`;
+                        GAP_TYPES.forEach(gt => {
+                            const typed = allGaps.filter(g => g.type === gt.id);
+                            if (!typed.length) return;
+                            html += `<div class="summary-type-group"><div class="summary-type-label" style="color:${gt.color}">${gt.icon} ${gt.label}</div><div class="gap-list" style="margin-bottom:8px">`;
+                            typed.forEach(g => {
+                                html += `<div class="gap-list-item">
+                                    <div class="gap-list-body">
+                                        <div class="gap-list-step">${escH(g.step || '')}</div>
+                                        <div class="gap-list-heading">${escH(g.heading || '')}</div>
+                                        <div class="gap-list-desc">${escH(g.description || '')}</div>
+                                        <div class="gap-list-mitigation">${escH(g.mitigation || '')}</div>
+                                    </div>
+                                </div>`;
+                            });
+                            html += `</div></div>`;
+                        });
+                    }
+                    html += `</div></div>`;
+                });
+                html += `</div>`;
             });
             document.getElementById('summary-body').innerHTML = html;
         }
