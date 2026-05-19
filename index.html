@@ -5,6 +5,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AIA Gap Analysis Platform</title>
+    <!-- Supabase JS SDK -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- Project config: sets window._db = supabase client -->
+    <script src="supabase-config.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&family=DM+Serif+Display&display=swap');
 
@@ -991,1361 +995,36 @@
             }
         }
 
-        /* ═══════════════════════════════════════════════════════════
-           LANDING PAGE
-        ═══════════════════════════════════════════════════════════ */
-        .view-overlay {
-            position: fixed;
-            inset: 0;
-            z-index: 500;
-            overflow-y: auto;
-            overflow-x: hidden
-        }
-
-        /* ── LANDING ── */
-        #view-landing {
-            background: #071825;
-            color: #fff;
-            font-family: 'DM Sans', sans-serif
-        }
-
-        .land-nav {
-            position: sticky;
-            top: 0;
-            z-index: 10;
-            display: flex;
+        /* ── VIEW-ONLY MODE ── */
+        .view-only-banner {
+            display: none;
             align-items: center;
-            justify-content: space-between;
-            padding: 0 60px;
-            height: 70px;
-            background: rgba(7, 24, 37, .9);
-            backdrop-filter: blur(16px);
-            -webkit-backdrop-filter: blur(16px);
-            border-bottom: 1px solid rgba(255, 255, 255, .07)
-        }
-
-        .land-nav-logo {
-            height: 30px;
-            width: auto
-        }
-
-        .land-nav-links {
-            display: flex;
-            align-items: center;
-            gap: 36px
-        }
-
-        .land-nav-link {
-            font-size: 14px;
-            color: rgba(255, 255, 255, .6);
-            cursor: pointer;
-            transition: color .15s
-        }
-
-        .land-nav-link:hover {
-            color: #fff
-        }
-
-        .btn-land-signin {
-            display: inline-flex;
-            align-items: center;
-            gap: 7px;
-            padding: 9px 22px;
-            background: rgba(255, 255, 255, .08);
-            color: #fff;
-            border: 1px solid rgba(255, 255, 255, .18);
-            border-radius: 8px;
-            font-family: 'DM Sans', sans-serif;
-            font-size: 14px;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all .2s
-        }
-
-        .btn-land-signin:hover {
-            background: rgba(255, 255, 255, .14);
-            border-color: rgba(255, 255, 255, .3)
-        }
-
-        /* Hero */
-        .hero {
-            min-height: calc(100vh - 70px);
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            align-items: center;
-            gap: 60px;
-            padding: 80px 60px;
-            position: relative;
-            overflow: hidden
-        }
-
-        .hero-orb {
-            position: absolute;
-            border-radius: 50%;
-            filter: blur(90px);
-            pointer-events: none
-        }
-
-        .hero-orb-1 {
-            width: 520px;
-            height: 520px;
-            background: #E74D26;
-            top: -120px;
-            left: -80px;
-            opacity: .14;
-            animation: orb-drift 10s ease-in-out infinite
-        }
-
-        .hero-orb-2 {
-            width: 420px;
-            height: 420px;
-            background: #0F8B6E;
-            bottom: -60px;
-            right: 25%;
-            opacity: .12;
-            animation: orb-drift 13s ease-in-out infinite reverse
-        }
-
-        .hero-orb-3 {
-            width: 320px;
-            height: 320px;
-            background: #1A5F9E;
-            top: 20%;
-            right: -40px;
-            opacity: .16;
-            animation: orb-drift 8s ease-in-out infinite 3s
-        }
-
-        @keyframes orb-drift {
-
-            0%,
-            100% {
-                transform: translate(0, 0) scale(1)
-            }
-
-            33% {
-                transform: translate(18px, -14px) scale(1.04)
-            }
-
-            66% {
-                transform: translate(-12px, 10px) scale(.96)
-            }
-        }
-
-        .hero-tag {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            padding: 6px 16px;
-            border-radius: 20px;
-            background: rgba(231, 77, 38, .15);
-            border: 1px solid rgba(231, 77, 38, .3);
-            font-size: 11.5px;
-            font-weight: 600;
-            color: #FF8060;
-            letter-spacing: .07em;
-            text-transform: uppercase;
-            margin-bottom: 24px
-        }
-
-        .hero-tag-dot {
-            width: 6px;
-            height: 6px;
-            border-radius: 50%;
-            background: #E74D26;
-            animation: pulse-dot 2s ease-in-out infinite
-        }
-
-        @keyframes pulse-dot {
-
-            0%,
-            100% {
-                opacity: 1;
-                transform: scale(1)
-            }
-
-            50% {
-                opacity: .45;
-                transform: scale(.65)
-            }
-        }
-
-        .hero-headline {
-            font-family: 'DM Serif Display', serif;
-            font-size: 54px;
-            line-height: 1.08;
-            font-weight: 400;
-            margin-bottom: 22px;
-            color: #fff
-        }
-
-        .hero-headline em {
-            font-style: normal;
-            color: #E74D26
-        }
-
-        .hero-sub {
-            font-size: 17px;
-            line-height: 1.72;
-            color: rgba(255, 255, 255, .6);
-            margin-bottom: 14px;
-            max-width: 460px
-        }
-
-        .hero-cycle-wrap {
-            font-size: 15px;
-            color: rgba(255, 255, 255, .55);
-            margin-bottom: 36px;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            flex-wrap: wrap
-        }
-
-        .hero-cycle {
-            display: inline-block;
-            color: #FF8060;
-            border-right: 2px solid #E74D26;
-            padding-right: 3px;
-            min-width: 2px;
-            animation: cursor-blink .8s step-end infinite
-        }
-
-        @keyframes cursor-blink {
-
-            0%,
-            100% {
-                border-color: #E74D26
-            }
-
-            50% {
-                border-color: transparent
-            }
-        }
-
-        .hero-actions {
-            display: flex;
-            align-items: center;
-            gap: 14px;
-            margin-bottom: 44px;
-            flex-wrap: wrap
-        }
-
-        .btn-land-primary {
-            display: inline-flex;
-            align-items: center;
-            gap: 9px;
-            padding: 13px 30px;
-            background: #E74D26;
-            color: #fff;
-            border: none;
-            border-radius: 8px;
-            font-family: 'DM Sans', sans-serif;
-            font-size: 15px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all .2s;
-            letter-spacing: .01em
-        }
-
-        .btn-land-primary:hover {
-            background: #C93E1C;
-            transform: translateY(-2px);
-            box-shadow: 0 10px 28px rgba(231, 77, 38, .38)
-        }
-
-        .btn-land-ghost {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            padding: 12px 24px;
-            background: rgba(255, 255, 255, .06);
-            color: rgba(255, 255, 255, .85);
-            border: 1px solid rgba(255, 255, 255, .15);
-            border-radius: 8px;
-            font-family: 'DM Sans', sans-serif;
-            font-size: 15px;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all .2s
-        }
-
-        .btn-land-ghost:hover {
-            background: rgba(255, 255, 255, .11);
-            border-color: rgba(255, 255, 255, .26)
-        }
-
-        .hero-proof {
-            display: flex;
-            align-items: center;
-            gap: 24px;
-            flex-wrap: wrap
-        }
-
-        .proof-item {
-            display: flex;
-            align-items: center;
-            gap: 7px;
+            gap: 10px;
+            background: var(--accent-light);
+            border: 1px solid var(--accent-border);
+            border-radius: var(--radius);
+            padding: 11px 16px;
             font-size: 13px;
-            color: rgba(255, 255, 255, .45)
-        }
-
-        .proof-icon {
-            color: #0F8B6E;
-            font-size: 14px
-        }
-
-        /* Mockup */
-        .hero-visual {
-            position: relative;
-            display: flex;
-            justify-content: center;
-            align-items: center
-        }
-
-        .hero-mockup {
-            width: 100%;
-            max-width: 490px;
-            background: #fff;
-            border-radius: 14px;
-            overflow: hidden;
-            box-shadow: 0 48px 96px rgba(0, 0, 0, .55), 0 0 0 1px rgba(255, 255, 255, .09);
-            animation: mockup-float 5.5s ease-in-out infinite
-        }
-
-        @keyframes mockup-float {
-
-            0%,
-            100% {
-                transform: translateY(0) rotate(-.5deg)
-            }
-
-            50% {
-                transform: translateY(-14px) rotate(.5deg)
-            }
-        }
-
-        .mockup-chrome {
-            background: #1A1A1A;
-            padding: 10px 16px;
-            display: flex;
-            align-items: center;
-            gap: 10px
-        }
-
-        .chrome-dots {
-            display: flex;
-            gap: 6px
-        }
-
-        .chrome-dot {
-            width: 11px;
-            height: 11px;
-            border-radius: 50%
-        }
-
-        .dot-r {
-            background: #FF5F57
-        }
-
-        .dot-y {
-            background: #FEBC2E
-        }
-
-        .dot-g {
-            background: #28C840
-        }
-
-        .chrome-url {
-            flex: 1;
-            background: rgba(255, 255, 255, .09);
-            border-radius: 5px;
-            padding: 4px 12px;
-            font-size: 10.5px;
-            color: rgba(255, 255, 255, .45);
-            text-align: center;
-            font-family: monospace
-        }
-
-        .mockup-appbar {
-            background: #092835;
-            padding: 10px 16px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between
-        }
-
-        .appbar-brand {
-            display: flex;
-            align-items: center;
-            gap: 10px
-        }
-
-        .appbar-logo-box {
-            width: 28px;
-            height: 28px;
-            background: #E74D26;
-            border-radius: 5px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 9px;
-            font-weight: 800;
-            color: #fff;
-            letter-spacing: .02em
-        }
-
-        .appbar-org {
-            font-size: 11px;
-            color: rgba(255, 255, 255, .65);
-            font-weight: 500
-        }
-
-        .appbar-live {
-            display: flex;
-            align-items: center;
-            gap: 5px;
-            font-size: 10px;
-            color: #28C840;
-            font-weight: 600
-        }
-
-        .appbar-live-dot {
-            width: 6px;
-            height: 6px;
-            border-radius: 50%;
-            background: #28C840;
-            animation: pulse-dot 1.5s ease-in-out infinite
-        }
-
-        .mockup-body {
-            display: flex;
-            background: #F5F4F0;
-            min-height: 220px
-        }
-
-        .mockup-sidebar {
-            width: 72px;
-            background: #0D1F2B;
-            padding: 10px 6px;
-            display: flex;
-            flex-direction: column;
-            gap: 3px
-        }
-
-        .sidebar-item {
-            padding: 6px 4px;
-            border-radius: 5px;
-            font-size: 9px;
-            font-weight: 700;
-            color: rgba(255, 255, 255, .38);
-            text-align: center;
-            letter-spacing: .04em
-        }
-
-        .sidebar-item.active {
-            background: rgba(231, 77, 38, .22);
-            color: #FF8060
-        }
-
-        .mockup-content {
-            flex: 1;
-            padding: 12px;
-            display: flex;
-            flex-direction: column;
-            gap: 10px
-        }
-
-        .content-header {
-            font-size: 10px;
-            font-weight: 700;
-            color: #0D1F2B;
-            padding-bottom: 7px;
-            border-bottom: 1px solid #E0DDD8
-        }
-
-        .content-stats {
-            display: flex;
-            gap: 7px
-        }
-
-        .stat-chip {
-            flex: 1;
-            background: #fff;
-            border: 1px solid #E0DDD8;
-            border-radius: 6px;
-            padding: 7px 6px;
-            text-align: center
-        }
-
-        .stat-chip.accent {
-            background: #FDF1ED;
-            border-color: #F0A990
-        }
-
-        .stat-n {
-            font-size: 16px;
-            font-weight: 700;
-            color: #0D1F2B;
-            line-height: 1
-        }
-
-        .stat-chip.accent .stat-n {
-            color: #E74D26
-        }
-
-        .stat-l {
-            font-size: 8px;
-            color: #8A9AA5;
-            margin-top: 2px;
-            font-weight: 500
-        }
-
-        .content-chart {
-            display: flex;
-            flex-direction: column;
-            gap: 6px
-        }
-
-        .chart-row {
-            display: flex;
-            align-items: center;
-            gap: 6px
-        }
-
-        .chart-label {
-            font-size: 8px;
-            color: #4A5A65;
-            width: 68px;
-            flex-shrink: 0;
-            line-height: 1.2
-        }
-
-        .chart-track {
-            flex: 1;
-            height: 7px;
-            background: #E0DDD8;
-            border-radius: 4px;
-            overflow: hidden
-        }
-
-        .chart-fill {
-            height: 100%;
-            border-radius: 4px;
-            transform: scaleX(0);
-            transform-origin: left;
-            animation: bar-grow 1.4s cubic-bezier(.18, .88, .32, 1.05) forwards
-        }
-
-        @keyframes bar-grow {
-            from {
-                transform: scaleX(0)
-            }
-
-            to {
-                transform: scaleX(1)
-            }
-        }
-
-        .chart-val {
-            font-size: 9px;
-            font-weight: 700;
-            color: #0D1F2B;
-            width: 16px;
-            text-align: right
-        }
-
-        .content-list {
-            display: flex;
-            flex-direction: column;
-            gap: 4px
-        }
-
-        .list-item {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            padding: 5px 8px;
-            background: #fff;
-            border: 1px solid #E0DDD8;
-            border-radius: 5px;
-            font-size: 9px;
-            color: #4A5A65
-        }
-
-        .list-item-dot {
-            width: 6px;
-            height: 6px;
-            border-radius: 50%;
-            flex-shrink: 0
-        }
-
-        .list-badge {
-            margin-left: auto;
-            font-size: 8px;
-            font-weight: 700;
-            padding: 1px 5px;
-            border-radius: 8px;
-            background: #E0EEF4;
-            color: #092835
-        }
-
-        /* Floating cards */
-        .float-card {
-            position: absolute;
-            background: #fff;
-            border-radius: 12px;
-            box-shadow: 0 12px 32px rgba(0, 0, 0, .22), 0 0 0 1px rgba(0, 0, 0, .06);
-            padding: 12px 16px;
-            font-family: 'DM Sans', sans-serif
-        }
-
-        .float-card-1 {
-            top: -24px;
-            right: -28px;
-            animation: fc-float 4.5s ease-in-out infinite
-        }
-
-        .float-card-2 {
-            bottom: 24px;
-            left: -32px;
-            animation: fc-float 5s ease-in-out infinite 1.5s
-        }
-
-        @keyframes fc-float {
-
-            0%,
-            100% {
-                transform: translateY(0)
-            }
-
-            50% {
-                transform: translateY(-9px)
-            }
-        }
-
-        .fc-label {
-            font-size: 9px;
-            font-weight: 600;
-            color: #8A9AA5;
-            text-transform: uppercase;
-            letter-spacing: .07em;
-            margin-bottom: 3px
-        }
-
-        .fc-value {
-            font-size: 18px;
-            font-weight: 700;
-            color: #0D1F2B;
-            line-height: 1
-        }
-
-        .fc-sub {
-            font-size: 9.5px;
-            color: #8A9AA5;
-            margin-top: 2px
-        }
-
-        .fc-icon {
-            font-size: 18px;
-            margin-bottom: 5px
-        }
-
-        /* Stats band */
-        .stats-band {
-            padding: 52px 60px;
-            background: rgba(231, 77, 38, .07);
-            border-top: 1px solid rgba(231, 77, 38, .12);
-            border-bottom: 1px solid rgba(231, 77, 38, .12)
-        }
-
-        .stats-inner {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 32px;
-            text-align: center;
-            max-width: 860px;
-            margin: 0 auto
-        }
-
-        .band-stat-n {
-            font-family: 'DM Serif Display', serif;
-            font-size: 42px;
-            font-weight: 400;
-            color: #E74D26;
-            line-height: 1;
-            margin-bottom: 6px
-        }
-
-        .band-stat-l {
-            font-size: 13.5px;
-            color: rgba(255, 255, 255, .5)
-        }
-
-        /* Features */
-        .features-section {
-            padding: 88px 60px;
-            background: #0D2136
-        }
-
-        .section-tag {
-            display: inline-block;
-            font-size: 11px;
-            font-weight: 700;
-            letter-spacing: .12em;
-            text-transform: uppercase;
-            color: #FF8060;
-            margin-bottom: 14px
-        }
-
-        .section-title {
-            font-family: 'DM Serif Display', serif;
-            font-size: 38px;
-            font-weight: 400;
-            color: #fff;
-            margin-bottom: 12px;
-            line-height: 1.18
-        }
-
-        .section-sub {
-            font-size: 16px;
-            color: rgba(255, 255, 255, .52);
-            margin-bottom: 52px;
-            max-width: 520px;
-            line-height: 1.65
-        }
-
-        .features-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 20px
-        }
-
-        .feature-card {
-            background: rgba(255, 255, 255, .04);
-            border: 1px solid rgba(255, 255, 255, .08);
-            border-radius: 14px;
-            padding: 28px;
-            transition: all .25s
-        }
-
-        .feature-card:hover {
-            background: rgba(255, 255, 255, .07);
-            border-color: rgba(255, 255, 255, .15);
-            transform: translateY(-3px)
-        }
-
-        .feature-icon {
-            width: 46px;
-            height: 46px;
-            border-radius: 10px;
-            background: rgba(231, 77, 38, .14);
-            border: 1px solid rgba(231, 77, 38, .22);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 22px;
-            margin-bottom: 18px
-        }
-
-        .feature-title {
-            font-size: 16px;
-            font-weight: 600;
-            color: #fff;
-            margin-bottom: 9px
-        }
-
-        .feature-desc {
-            font-size: 13.5px;
-            color: rgba(255, 255, 255, .48);
-            line-height: 1.65
-        }
-
-        /* CTA */
-        .cta-section {
-            padding: 88px 60px;
-            text-align: center;
-            background: #071825;
-            position: relative;
-            overflow: hidden
-        }
-
-        .cta-section::before {
-            content: '';
-            position: absolute;
-            inset: 0;
-            background: radial-gradient(ellipse 70% 80% at 50% 50%, rgba(231, 77, 38, .1) 0%, transparent 70%);
-            pointer-events: none
-        }
-
-        .cta-section .section-title {
-            max-width: 580px;
-            margin: 0 auto 14px
-        }
-
-        .cta-section .section-sub {
-            max-width: 480px;
-            margin: 0 auto 40px
-        }
-
-        /* Footer */
-        .land-footer {
-            padding: 28px 60px;
-            background: rgba(0, 0, 0, .25);
-            border-top: 1px solid rgba(255, 255, 255, .06);
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 20px
-        }
-
-        .footer-copy {
-            font-size: 13px;
-            color: rgba(255, 255, 255, .3)
-        }
-
-        .footer-links {
-            display: flex;
-            gap: 28px
-        }
-
-        .footer-link {
-            font-size: 13px;
-            color: rgba(255, 255, 255, .3);
-            cursor: pointer;
-            transition: color .15s
-        }
-
-        .footer-link:hover {
-            color: rgba(255, 255, 255, .6)
-        }
-
-        /* ═══════════════════════════════════════════════════════════
-           LOGIN OVERLAY
-        ═══════════════════════════════════════════════════════════ */
-        #view-login {
-            background: rgba(5, 18, 28, .93);
-            backdrop-filter: blur(24px);
-            -webkit-backdrop-filter: blur(24px);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 24px
-        }
-
-        .login-card {
-            background: #fff;
-            border-radius: 18px;
-            padding: 48px 44px;
-            width: 100%;
-            max-width: 428px;
-            box-shadow: 0 48px 96px rgba(0, 0, 0, .45), 0 0 0 1px rgba(0, 0, 0, .08);
-            animation: login-pop .32s cubic-bezier(.22, .82, .32, 1.06)
-        }
-
-        @keyframes login-pop {
-            from {
-                opacity: 0;
-                transform: scale(.95) translateY(10px)
-            }
-
-            to {
-                opacity: 1;
-                transform: scale(1) translateY(0)
-            }
-        }
-
-        .login-logo {
-            height: 34px;
-            width: auto;
-            margin-bottom: 30px;
-            display: block
-        }
-
-        .login-title {
-            font-family: 'DM Serif Display', serif;
-            font-size: 26px;
-            font-weight: 400;
-            color: #0D1F2B;
-            margin-bottom: 6px
-        }
-
-        .login-sub {
-            font-size: 14px;
-            color: #8A9AA5;
-            margin-bottom: 28px;
-            line-height: 1.5
-        }
-
-        .login-demo-note {
-            display: flex;
-            align-items: flex-start;
-            gap: 9px;
-            padding: 12px 14px;
-            background: #EAF0F3;
-            border: 1px solid #8AB0BF;
-            border-radius: 9px;
-            font-size: 12.5px;
-            color: #0A2535;
-            margin-bottom: 22px;
-            line-height: 1.55
-        }
-
-        .login-field {
-            margin-bottom: 16px
-        }
-
-        .login-label {
-            display: block;
-            font-size: 12.5px;
-            font-weight: 600;
-            color: #0D1F2B;
-            margin-bottom: 6px
-        }
-
-        .login-input {
-            width: 100%;
-            padding: 11px 14px;
-            border: 1.5px solid #E0DDD8;
-            border-radius: 8px;
-            font-family: 'DM Sans', sans-serif;
-            font-size: 14px;
-            color: #0D1F2B;
-            background: #F5F4F0;
-            transition: all .15s;
+            color: var(--text);
+            margin-bottom: 20px
+        }
+
+        body.view-only .view-only-banner { display: flex }
+        body.view-only .gap-form-card { display: none !important }
+        body.view-only .action-bar { display: none !important }
+        body.view-only .btn-icon { display: none !important }
+        body.view-only [contenteditable="true"] {
+            pointer-events: none;
+            cursor: default;
             outline: none
         }
+        body.view-only #clear-data-btn { display: none !important }
 
-        .login-input:focus {
-            border-color: #092835;
-            background: #fff;
-            box-shadow: 0 0 0 3px rgba(9, 40, 53, .08)
-        }
-
-        .btn-login {
-            width: 100%;
-            padding: 13px;
-            background: #092835;
-            color: #fff;
-            border: none;
-            border-radius: 9px;
-            font-family: 'DM Sans', sans-serif;
-            font-size: 15px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: background .15s;
-            margin-bottom: 14px;
-            margin-top: 6px
-        }
-
-        .btn-login:hover {
-            background: #0F3D50
-        }
-
-        .login-back {
-            text-align: center;
-            font-size: 13px;
-            color: #8A9AA5
-        }
-
-        .login-back span {
-            color: #092835;
-            cursor: pointer;
-            font-weight: 500;
-            text-decoration: underline;
-            text-underline-offset: 3px
-        }
-
-        /* Transitions */
-        @keyframes view-out {
-            from {
-                opacity: 1;
-                transform: translateY(0)
-            }
-
-            to {
-                opacity: 0;
-                transform: translateY(-16px)
-            }
-        }
-
-        @keyframes view-in {
-            from {
-                opacity: 0
-            }
-
-            to {
-                opacity: 1
-            }
-        }
-
-        .anim-out {
-            animation: view-out .35s ease forwards
-        }
-
-        .anim-in {
-            animation: view-in .4s ease forwards
-        }
-
-        /* Responsive landing */
-        @media(max-width:960px) {
-            .hero {
-                grid-template-columns: 1fr;
-                padding: 60px 32px;
-                min-height: auto;
-                gap: 0
-            }
-
-            .hero-visual {
-                display: none
-            }
-
-            .hero-headline {
-                font-size: 38px
-            }
-
-            .features-grid {
-                grid-template-columns: 1fr 1fr;
-                gap: 14px
-            }
-
-            .stats-inner {
-                grid-template-columns: repeat(2, 1fr)
-            }
-
-            .land-nav {
-                padding: 0 28px
-            }
-
-            .land-nav-links {
-                display: none
-            }
-
-            .features-section,
-            .cta-section,
-            .stats-band {
-                padding: 60px 28px
-            }
-
-            .land-footer {
-                flex-direction: column;
-                align-items: flex-start;
-                padding: 24px 28px
-            }
-        }
-
-        @media(max-width:600px) {
-            .features-grid {
-                grid-template-columns: 1fr
-            }
-
-            .hero-headline {
-                font-size: 32px
-            }
-        }
     </style>
     <link href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700&display=swap" rel="stylesheet">
 </head>
 
 <body>
-
-    <!-- ═══════════════════════════════════════════════════ LANDING PAGE -->
-    <div id="view-landing" class="view-overlay">
-
-        <nav class="land-nav">
-            <img src="https://www.africaia.com/images/aia_logos/logo.svg" class="land-nav-logo"
-                alt="Africa International Advisors">
-            <div class="land-nav-links">
-                <span class="land-nav-link"
-                    onclick="document.getElementById('features').scrollIntoView({behavior:'smooth'})">Features</span>
-                <span class="land-nav-link"
-                    onclick="document.getElementById('stats').scrollIntoView({behavior:'smooth'})">Platform</span>
-                <span class="land-nav-link">About AIA</span>
-            </div>
-            <button class="btn-land-signin" onclick="showLogin()">
-                Sign In
-                <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                    <path d="M2.5 7h9M8 3.5L11.5 7 8 10.5" stroke="currentColor" stroke-width="1.6"
-                        stroke-linecap="round" stroke-linejoin="round" />
-                </svg>
-            </button>
-        </nav>
-
-        <!-- Hero -->
-        <section class="hero">
-            <div class="hero-orb hero-orb-1"></div>
-            <div class="hero-orb hero-orb-2"></div>
-            <div class="hero-orb hero-orb-3"></div>
-
-            <div class="hero-text">
-                <div class="hero-tag">
-                    <span class="hero-tag-dot"></span>
-                    Business Process Intelligence
-                </div>
-                <h1 class="hero-headline">
-                    Gap Analysis<br>
-                    <em>Reimagined</em><br>
-                    for Africa
-                </h1>
-                <p class="hero-sub">A structured, guided platform for identifying, categorising, and reporting process
-                    gaps — built for organisations that demand clarity and accountability.</p>
-                <div class="hero-cycle-wrap">
-                    Currently deployed for <span id="hero-cycle" class="hero-cycle"></span>
-                </div>
-                <div class="hero-actions">
-                    <button class="btn-land-primary" onclick="showLogin()">
-                        Access Platform
-                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                            <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.8"
-                                stroke-linecap="round" stroke-linejoin="round" />
-                        </svg>
-                    </button>
-                    <button class="btn-land-ghost"
-                        onclick="document.getElementById('features').scrollIntoView({behavior:'smooth'})">
-                        Learn more
-                    </button>
-                </div>
-                <div class="hero-proof">
-                    <div class="proof-item"><span class="proof-icon">✓</span><span>No installation needed</span></div>
-                    <div class="proof-item"><span class="proof-icon">✓</span><span>One-click XLSX export</span></div>
-                    <div class="proof-item"><span class="proof-icon">✓</span><span>Auto-save as you go</span></div>
-                </div>
-            </div>
-
-            <!-- Dashboard mockup -->
-            <div class="hero-visual">
-                <div class="float-card float-card-1">
-                    <div class="fc-label">Total Gaps Identified</div>
-                    <div class="fc-value">86</div>
-                    <div class="fc-sub">across 9 departments</div>
-                </div>
-
-                <div class="hero-mockup">
-                    <div class="mockup-chrome">
-                        <div class="chrome-dots">
-                            <span class="chrome-dot dot-r"></span>
-                            <span class="chrome-dot dot-y"></span>
-                            <span class="chrome-dot dot-g"></span>
-                        </div>
-                        <div class="chrome-url">app.africaia.com/gap-analysis</div>
-                    </div>
-                    <div class="mockup-appbar">
-                        <div class="appbar-brand">
-                            <div class="appbar-logo-box">AIA</div>
-                            <div class="appbar-org">KZNGFA · BPR Gap Analysis</div>
-                        </div>
-                        <div class="appbar-live"><span class="appbar-live-dot"></span>Live</div>
-                    </div>
-                    <div class="mockup-body">
-                        <div class="mockup-sidebar">
-                            <div class="sidebar-item active">SCM</div>
-                            <div class="sidebar-item">FIN</div>
-                            <div class="sidebar-item">HR</div>
-                            <div class="sidebar-item">INV</div>
-                            <div class="sidebar-item">IT</div>
-                            <div class="sidebar-item">RLC</div>
-                        </div>
-                        <div class="mockup-content">
-                            <div class="content-header">Supply Chain Management — Processes</div>
-                            <div class="content-stats">
-                                <div class="stat-chip">
-                                    <div class="stat-n">12</div>
-                                    <div class="stat-l">Processes</div>
-                                </div>
-                                <div class="stat-chip accent">
-                                    <div class="stat-n">31</div>
-                                    <div class="stat-l">Gaps Found</div>
-                                </div>
-                                <div class="stat-chip">
-                                    <div class="stat-n">8</div>
-                                    <div class="stat-l">Reviewed</div>
-                                </div>
-                            </div>
-                            <div class="content-chart">
-                                <div class="chart-row">
-                                    <div class="chart-label">Service Delivery</div>
-                                    <div class="chart-track">
-                                        <div class="chart-fill"
-                                            style="width:72%;background:#E74D26;animation-delay:.2s"></div>
-                                    </div>
-                                    <div class="chart-val">23</div>
-                                </div>
-                                <div class="chart-row">
-                                    <div class="chart-label">Automation</div>
-                                    <div class="chart-track">
-                                        <div class="chart-fill"
-                                            style="width:56%;background:#0F5A9E;animation-delay:.35s"></div>
-                                    </div>
-                                    <div class="chart-val">18</div>
-                                </div>
-                                <div class="chart-row">
-                                    <div class="chart-label">Productivity</div>
-                                    <div class="chart-track">
-                                        <div class="chart-fill"
-                                            style="width:44%;background:#0A6B0A;animation-delay:.5s"></div>
-                                    </div>
-                                    <div class="chart-val">14</div>
-                                </div>
-                                <div class="chart-row">
-                                    <div class="chart-label">Governance</div>
-                                    <div class="chart-track">
-                                        <div class="chart-fill"
-                                            style="width:34%;background:#6B119E;animation-delay:.65s"></div>
-                                    </div>
-                                    <div class="chart-val">11</div>
-                                </div>
-                            </div>
-                            <div class="content-list">
-                                <div class="list-item">
-                                    <span class="list-item-dot" style="background:#E74D26"></span>
-                                    Procurement Planning
-                                    <span class="list-badge">4 gaps</span>
-                                </div>
-                                <div class="list-item">
-                                    <span class="list-item-dot" style="background:#0F5A9E"></span>
-                                    Contracting
-                                    <span class="list-badge">3 gaps</span>
-                                </div>
-                                <div class="list-item">
-                                    <span class="list-item-dot" style="background:#0A6B0A"></span>
-                                    Asset Management
-                                    <span class="list-badge">2 gaps</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="float-card float-card-2">
-                    <div class="fc-icon">📊</div>
-                    <div class="fc-label">Latest Export</div>
-                    <div class="fc-sub" style="font-size:11px;color:#0D1F2B;font-weight:600">KZNGFA_Gap_Report.xlsx
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- Stats band -->
-        <div class="stats-band" id="stats">
-            <div class="stats-inner">
-                <div>
-                    <div class="band-stat-n">9+</div>
-                    <div class="band-stat-l">Departments per engagement</div>
-                </div>
-                <div>
-                    <div class="band-stat-n">4</div>
-                    <div class="band-stat-l">Gap categories tracked</div>
-                </div>
-                <div>
-                    <div class="band-stat-n">100+</div>
-                    <div class="band-stat-l">Processes mappable</div>
-                </div>
-                <div>
-                    <div class="band-stat-n">XLSX</div>
-                    <div class="band-stat-l">One-click stakeholder export</div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Features -->
-        <section class="features-section" id="features">
-            <div class="section-tag">Platform Capabilities</div>
-            <h2 class="section-title">Everything you need to capture and act on process gaps</h2>
-            <p class="section-sub">Purpose-built for BPR engagements. No generic survey tools — a structured workflow
-                tuned to public sector process excellence.</p>
-            <div class="features-grid">
-                <div class="feature-card">
-                    <div class="feature-icon">🗺️</div>
-                    <div class="feature-title">Process Map Integration</div>
-                    <div class="feature-desc">Link live process maps to each survey step. Respondents click directly on
-                        the map to pinpoint where a gap occurs.</div>
-                </div>
-                <div class="feature-card">
-                    <div class="feature-icon">⚡</div>
-                    <div class="feature-title">Structured Gap Capture</div>
-                    <div class="feature-desc">Four predefined gap categories — Service Delivery, Automation,
-                        Productivity, and Governance — ensure consistent, comparable data.</div>
-                </div>
-                <div class="feature-card">
-                    <div class="feature-icon">🏢</div>
-                    <div class="feature-title">Department-Level Views</div>
-                    <div class="feature-desc">Each respondent works within their own department. Processes, maps, and
-                        gaps are fully scoped to their area.</div>
-                </div>
-                <div class="feature-card">
-                    <div class="feature-icon">📋</div>
-                    <div class="feature-title">Guided Survey Wizard</div>
-                    <div class="feature-desc">A step-by-step flow walks users through every process. Auto-save means no
-                        data is lost if a session is interrupted.</div>
-                </div>
-                <div class="feature-card">
-                    <div class="feature-icon">📊</div>
-                    <div class="feature-title">Export &amp; Report</div>
-                    <div class="feature-desc">Download a formatted Excel workbook — process view and category view —
-                        ready for immediate stakeholder distribution.</div>
-                </div>
-                <div class="feature-card">
-                    <div class="feature-icon">🔒</div>
-                    <div class="feature-title">Client-Specific Access</div>
-                    <div class="feature-desc">Each client engagement runs in its own context. Departments, processes,
-                        and branding are pre-configured per deployment.</div>
-                </div>
-            </div>
-        </section>
-
-        <!-- CTA -->
-        <section class="cta-section">
-            <div class="section-tag">Ready to begin?</div>
-            <h2 class="section-title">Start your BPR gap analysis engagement today</h2>
-            <p class="section-sub">AIA configures and deploys the platform to your client's team within days —
-                pre-loaded with their department structure and process maps.</p>
-            <button class="btn-land-primary" onclick="showLogin()" style="font-size:16px;padding:15px 38px">
-                Sign In to Platform
-                <svg width="18" height="18" viewBox="0 0 16 16" fill="none">
-                    <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"
-                        stroke-linejoin="round" />
-                </svg>
-            </button>
-        </section>
-
-        <footer class="land-footer">
-            <span class="footer-copy">© 2025 Africa International Advisors (Pty) Ltd. All rights reserved.</span>
-            <div class="footer-links">
-                <span class="footer-link">Privacy</span>
-                <span class="footer-link">Terms</span>
-                <span class="footer-link">Contact</span>
-            </div>
-        </footer>
-    </div>
-
-    <!-- ═══════════════════════════════════════════════════ LOGIN OVERLAY -->
-    <div id="view-login" class="view-overlay" style="display:none">
-        <div class="login-card">
-            <img src="https://www.africaia.com/images/aia_logos/logo.svg" class="login-logo"
-                alt="Africa International Advisors">
-            <div class="login-title">Welcome back</div>
-            <div class="login-sub">Sign in to access your client workspace</div>
-            <div class="login-demo-note">
-                <span style="flex-shrink:0">ℹ️</span>
-                <span><strong>Demo mode —</strong> any email and password will grant access to the KZNGFA
-                    engagement.</span>
-            </div>
-            <form onsubmit="doLogin(event)">
-                <div class="login-field">
-                    <label class="login-label">Email address</label>
-                    <input class="login-input" type="email" placeholder="you@organisation.com" required>
-                </div>
-                <div class="login-field">
-                    <label class="login-label">Password</label>
-                    <input class="login-input" type="password" placeholder="••••••••" required>
-                </div>
-                <button type="submit" class="btn-login">Sign In →</button>
-            </form>
-            <div class="login-back">
-                <span onclick="showLanding()">← Back to overview</span>
-            </div>
-        </div>
-    </div>
 
     <!-- ═══════════════════════════════════════════════════ APP SHELL -->
     <div id="app-shell">
@@ -2363,10 +1042,16 @@
                 <div style="display:flex;align-items:center;gap:10px">
                     <span class="hdr-client-tag">KZNGFA</span>
                     <span class="step-pill" id="step-pill">Step 1 of 6</span>
+                    <button onclick="doLogout()" style="background:none;border:1px solid var(--border2);border-radius:6px;padding:5px 12px;font-family:'DM Sans',sans-serif;font-size:12px;color:var(--text2);cursor:pointer;" title="Sign out">Sign out</button>
                 </div>
             </div>
             <div class="progress-track">
                 <div class="progress-fill" id="progress" style="width:16.7%"></div>
+            </div>
+
+            <div class="view-only-banner" id="view-only-banner">
+                <span>👁</span>
+                <span>You have <strong>view-only</strong> access. Contact your project coordinator to request editing access.</span>
             </div>
 
             <!-- PAGE 1: INTRO -->
@@ -2613,7 +1298,7 @@
                 </div>
                 <div id="summary-body"></div>
                 <div style="margin-top:24px;display:flex;justify-content:flex-end">
-                    <button class="btn btn-sm btn-ghost" onclick="clearAllData()"
+                    <button id="clear-data-btn" class="btn btn-sm btn-ghost" onclick="clearAllData()"
                         style="color:var(--danger);border-color:var(--danger-border)">Clear all data</button>
                 </div>
             </div>
@@ -2622,67 +1307,24 @@
     </div><!-- /app-shell -->
 
     <script>
-        // ─── VIEW SWITCHING ────────────────────────────────────────────────────────
-        function showLogin() {
-            const landing = document.getElementById('view-landing');
-            const login = document.getElementById('view-login');
-            landing.classList.add('anim-out');
-            setTimeout(() => {
-                landing.style.display = 'none';
-                landing.classList.remove('anim-out');
-                login.style.display = 'flex';
-            }, 320);
+
+        // ─── AUTH GUARD ──────────────────────────────────────────────────────────
+        if (!localStorage.getItem('aia_token')) {
+            window.location.replace('auth.html');
         }
 
-        function showLanding() {
-            const landing = document.getElementById('view-landing');
-            const login = document.getElementById('view-login');
-            login.style.display = 'none';
-            landing.style.display = '';
-            landing.scrollTop = 0;
+        const IS_PRO_OWNER = localStorage.getItem('aia_is_pro_owner') === 'true';
+        if (!IS_PRO_OWNER) document.body.classList.add('view-only');
+
+        function doLogout() {
+            const token = localStorage.getItem('aia_token');
+            if (token && window._db) {
+                try { window._db.rpc('logout_user', { p_token: token }); } catch (_) {}
+            }
+            ['aia_token', 'aia_email', 'aia_name', 'aia_role', 'aia_org', 'aia_is_pro_owner', 'kzngfa_nav'].forEach(k => localStorage.removeItem(k));
+            window.location.replace('auth.html');
         }
 
-        function doLogin(e) {
-            e.preventDefault();
-            const login = document.getElementById('view-login');
-            login.classList.add('anim-out');
-            setTimeout(() => {
-                login.style.display = 'none';
-                login.classList.remove('anim-out');
-                window.scrollTo(0, 0);
-            }, 340);
-        }
-
-        // ─── HERO TYPING ANIMATION ─────────────────────────────────────────────────
-        const DEMO_ORGS = [
-            'KwaZulu-Natal Growth Fund Agency',
-            'Public Sector Organisations',
-            'Provincial Government Departments',
-            'Development Finance Institutions',
-            'State-Owned Enterprises',
-        ];
-        let _cycleIdx = 0;
-        const _cycleEl = document.getElementById('hero-cycle');
-
-        function _typeText(text, cb) {
-            _cycleEl.textContent = '';
-            let i = 0;
-            const t = setInterval(() => {
-                _cycleEl.textContent += text[i++];
-                if (i >= text.length) { clearInterval(t); if (cb) setTimeout(cb, 2200); }
-            }, 38);
-        }
-        function _eraseText(cb) {
-            const t = setInterval(() => {
-                _cycleEl.textContent = _cycleEl.textContent.slice(0, -1);
-                if (!_cycleEl.textContent.length) { clearInterval(t); if (cb) setTimeout(cb, 160); }
-            }, 22);
-        }
-        function _cycle() {
-            _cycleIdx = (_cycleIdx + 1) % DEMO_ORGS.length;
-            _eraseText(() => _typeText(DEMO_ORGS[_cycleIdx], _cycle));
-        }
-        if (_cycleEl) setTimeout(() => _typeText(DEMO_ORGS[0], _cycle), 600);
 
         // ─── DATA ─────────────────────────────────────────────────────────────────
         const PROCESSES = {
@@ -2842,10 +1484,43 @@
         // ─── STATE ────────────────────────────────────────────────────────────────
         let state = { dept: null, currentProcId: null, currentGapType: null, responses: {} };
 
-        function saveState() { localStorage.setItem('kzngfa_gap_v3', JSON.stringify(state)) }
-        function loadState() {
-            const s = localStorage.getItem('kzngfa_gap_v3');
-            if (s) { try { state = JSON.parse(s) } catch (_) { } }
+        function saveState() {
+            // Persist navigation locally; gap data goes to the DB
+            localStorage.setItem('kzngfa_nav', JSON.stringify({
+                dept: state.dept,
+                currentProcId: state.currentProcId,
+                currentGapType: state.currentGapType
+            }));
+            const token = localStorage.getItem('aia_token');
+            if (token && state.currentProcId && state.dept) {
+                const gaps = state.responses[state.currentProcId]?.gaps || [];
+                window._db.rpc('upsert_gap_response', {
+                    p_token:   token,
+                    p_dept:    state.dept,
+                    p_proc_id: state.currentProcId,
+                    p_gaps:    gaps
+                }).then(null, () => {});
+            }
+        }
+
+        async function loadState() {
+            const nav = localStorage.getItem('kzngfa_nav');
+            if (nav) {
+                try {
+                    const n = JSON.parse(nav);
+                    state.dept = n.dept;
+                    state.currentProcId = n.currentProcId;
+                    state.currentGapType = n.currentGapType;
+                } catch (_) {}
+            }
+            const token = localStorage.getItem('aia_token');
+            if (!token) return;
+            try {
+                const { data, error } = await window._db.rpc('load_gap_responses', { p_token: token });
+                if (!error && data) {
+                    data.forEach(row => { state.responses[row.proc_id] = { gaps: row.gaps || [] }; });
+                }
+            } catch (_) {}
         }
 
         // ─── NAVIGATION ───────────────────────────────────────────────────────────
@@ -3029,6 +1704,7 @@
         }
 
         function saveGap() {
+            if (!IS_PRO_OWNER) return;
             const heading = document.getElementById('gap-heading').value.trim();
             const description = document.getElementById('gap-desc').value.trim();
             if (!heading && !description) {
@@ -3056,6 +1732,7 @@
         }
 
         function removeGap(realIdx) {
+            if (!IS_PRO_OWNER) return;
             const procId = state.currentProcId;
             if (!state.responses[procId]?.gaps) return;
             state.responses[procId].gaps.splice(realIdx, 1);
@@ -3064,6 +1741,7 @@
         }
 
         function saveGapListField(el) {
+            if (!IS_PRO_OWNER) return;
             const procId = el.dataset.proc;
             const idx = parseInt(el.dataset.idx);
             const field = el.dataset.field;
@@ -3121,6 +1799,7 @@
         }
 
         function saveSummaryField(el) {
+            if (!IS_PRO_OWNER) return;
             const procId = el.dataset.proc;
             const idx = parseInt(el.dataset.idx);
             const field = el.dataset.field;
@@ -3130,6 +1809,7 @@
         }
 
         function removeSummaryGap(procId, idx) {
+            if (!IS_PRO_OWNER) return;
             if (!state.responses[procId]?.gaps) return;
             state.responses[procId].gaps.splice(idx, 1);
             saveState();
@@ -3171,9 +1851,14 @@
         // ─── UTILS ────────────────────────────────────────────────────────────────
         function escH(s) { return (s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;') }
 
-        function clearAllData() {
+        async function clearAllData() {
+            if (!IS_PRO_OWNER) return;
             if (!confirm('This will permanently delete all saved responses. Are you sure?')) return;
-            localStorage.removeItem('kzngfa_gap_v3');
+            const token = localStorage.getItem('aia_token');
+            if (token) {
+                try { await window._db.rpc('delete_all_gap_responses', { p_token: token }); } catch (_) {}
+            }
+            localStorage.removeItem('kzngfa_nav');
             state = { dept: null, currentProcId: null, currentGapType: null, responses: {} };
             goTo('page-intro');
         }
@@ -3191,11 +1876,12 @@
         });
 
         // ─── INIT ─────────────────────────────────────────────────────────────────
-        loadState();
-        if (state.dept) {
-            const card = document.querySelector(`.dept-card[data-dept="${state.dept}"]`);
-            if (card) card.classList.add('selected');
-        }
+        loadState().then(() => {
+            if (state.dept) {
+                const card = document.querySelector(`.dept-card[data-dept="${state.dept}"]`);
+                if (card) card.classList.add('selected');
+            }
+        });
     </script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script src="process-maps.js"></script>
