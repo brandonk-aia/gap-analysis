@@ -1825,7 +1825,7 @@
         function renderDeptSummary() {
             if (!state.dept) return;
             const procs = PROCESSES[state.dept];
-            let html = `<div class="summary-dept-label">${DEPT_LABELS[state.dept]}</div>`;
+            let html = `<div class="summary-dept-label", style="font-size: 20px">${DEPT_LABELS[state.dept]}</div>`;
             procs.forEach(p => {
                 const allGaps = state.responses[p.id]?.gaps || [];
                 html += `<div class="summary-proc-row">
