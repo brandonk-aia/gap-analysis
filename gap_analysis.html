@@ -1529,7 +1529,7 @@
         ];
 
         // ─── STATE ────────────────────────────────────────────────────────────────
-        let state = { dept: null, currentProcId: null, currentGapType: null, responses: {} };
+        let state = { dept: null, currentProcId: null, currentGapType: null, responses: {}, allResponses: {} };
 
         function saveState() {
             // Persist navigation locally; gap data goes to the DB
@@ -1570,6 +1570,37 @@
             } catch (_) {}
         }
 
+        async function loadOrgResponses() {
+            const result = {};
+            let rpcOk = false;
+            try {
+                const { data, error } = await window._db.rpc('load_all_gap_responses');
+                if (error) console.warn('load_all_gap_responses error:', error.message);
+                if (!error) {
+                    rpcOk = true;
+                    (data || []).forEach(row => {
+                        if (!result[row.proc_id]) result[row.proc_id] = { gaps: [] };
+                        if (Array.isArray(row.gaps)) result[row.proc_id].gaps.push(...row.gaps);
+                    });
+                }
+            } catch (e) { console.warn('loadOrgResponses exception:', e); }
+            if (rpcOk) {
+                // Pre-populate every known proc so getDisplayGaps knows data was loaded
+                Object.values(PROCESSES).flat().forEach(p => {
+                    if (!result[p.id]) result[p.id] = { gaps: [] };
+                });
+                state.allResponses = result;
+            }
+            return result;
+        }
+
+        // Returns org-wide gaps if loaded, falls back to current user's gaps
+        function getDisplayGaps(procId) {
+            const entry = state.allResponses[procId];
+            if (entry) return entry.gaps;
+            return state.responses[procId]?.gaps ?? [];
+        }
+
         // ─── NAVIGATION ───────────────────────────────────────────────────────────
         const PAGES = ['page-intro', 'page-dept', 'page-index', 'page-map', 'page-gap', 'page-summary'];
         const STEP_LABELS = ['Step 1 of 6', 'Step 2 of 6', 'Step 3 of 6', 'Step 4 of 6', 'Step 5 of 6', 'Step 6 of 6'];
@@ -1608,10 +1639,10 @@
             if (!state.dept) return;
             const procs = PROCESSES[state.dept] || [];
             document.getElementById('index-title').textContent = DEPT_LABELS[state.dept] + ' — Processes';
-            const withGaps = procs.filter(p => (state.responses[p.id]?.gaps?.length || 0) > 0).length;
+            const withGaps = procs.filter(p => getDisplayGaps(p.id).length > 0).length;
             document.getElementById('index-progress-text').textContent = withGaps + ' of ' + procs.length + ' with gaps recorded';
             document.getElementById('proc-index-list').innerHTML = procs.map(p => {
-                const gapCount = state.responses[p.id]?.gaps?.length || 0;
+                const gapCount = getDisplayGaps(p.id).length;
                 const statusHtml = gapCount > 0
                     ? `<span class="proc-status done">${gapCount} gap${gapCount > 1 ? 's' : ''}</span>`
                     : `<span class="proc-status">Not started</span>`;
@@ -1682,7 +1713,7 @@
         // ─── GAP TYPE CARDS ───────────────────────────────────────────────────────
         function renderGapTypeCards() {
             const procId = state.currentProcId;
-            const gaps = state.responses[procId]?.gaps || [];
+            const gaps = getDisplayGaps(procId);
             document.getElementById('gap-types-grid').innerHTML = GAP_TYPES.map(gt => {
                 const count = gaps.filter(g => g.type === gt.id).length;
                 const countBadge = count > 0
@@ -1723,22 +1754,36 @@
         function renderGapList() {
             const procId = state.currentProcId;
             const typeId = state.currentGapType;
-            const all = state.responses[procId]?.gaps || [];
-            const typed = all.filter(g => g.type === typeId);
+            const allDisplay = getDisplayGaps(procId);
+            const myGaps = state.responses[procId]?.gaps || [];
+            const typed = allDisplay.filter(g => g.type === typeId);
             const sec = document.getElementById('gap-list-section');
             if (!typed.length) { sec.style.display = 'none'; return; }
             document.getElementById('gap-list-label').textContent = `Recorded gaps (${typed.length})`;
             document.getElementById('gap-list').innerHTML = typed.map(g => {
-                const realIdx = all.indexOf(g);
+                const myIdx = myGaps.findIndex(mg =>
+                    mg.type === g.type && mg.step === g.step &&
+                    mg.heading === g.heading && mg.description === g.description);
+                const isMine = IS_PRO_OWNER && myIdx !== -1;
+                if (isMine) {
+                    return `<div class="gap-list-item">
+                    <div class="gap-list-body">
+                        <div class="gap-list-step" contenteditable="true" data-proc="${procId}" data-idx="${myIdx}" data-field="step" onblur="saveGapListField(this)">${escH(g.step || '')}</div>
+                        <div class="gap-list-heading" contenteditable="true" data-proc="${procId}" data-idx="${myIdx}" data-field="heading" onblur="saveGapListField(this)">${escH(g.heading || '')}</div>
+                        <div class="gap-list-desc" contenteditable="true" data-proc="${procId}" data-idx="${myIdx}" data-field="description" onblur="saveGapListField(this)">${escH(g.description || '')}</div>
+                        <div class="gap-list-mitigation" contenteditable="true" data-proc="${procId}" data-idx="${myIdx}" data-field="mitigation" onblur="saveGapListField(this)">${escH(g.mitigation || '')}</div>
+                    </div>
+                    <button class="btn-icon" title="Remove" onclick="removeGap(${myIdx})">✕</button>
+                </div>`;
+                }
                 return `<div class="gap-list-item">
-                <div class="gap-list-body">
-                    <div class="gap-list-step" contenteditable="true" data-proc="${procId}" data-idx="${realIdx}" data-field="step" onblur="saveGapListField(this)">${escH(g.step || '')}</div>
-                    <div class="gap-list-heading" contenteditable="true" data-proc="${procId}" data-idx="${realIdx}" data-field="heading" onblur="saveGapListField(this)">${escH(g.heading || '')}</div>
-                    <div class="gap-list-desc" contenteditable="true" data-proc="${procId}" data-idx="${realIdx}" data-field="description" onblur="saveGapListField(this)">${escH(g.description || '')}</div>
-                    <div class="gap-list-mitigation" contenteditable="true" data-proc="${procId}" data-idx="${realIdx}" data-field="mitigation" onblur="saveGapListField(this)">${escH(g.mitigation || '')}</div>
-                </div>
-                <button class="btn-icon" title="Remove" onclick="removeGap(${realIdx})">✕</button>
-            </div>`;
+                    <div class="gap-list-body">
+                        <div class="gap-list-step">${escH(g.step || '')}</div>
+                        <div class="gap-list-heading">${escH(g.heading || '')}</div>
+                        <div class="gap-list-desc">${escH(g.description || '')}</div>
+                        <div class="gap-list-mitigation">${escH(g.mitigation || '')}</div>
+                    </div>
+                </div>`;
             }).join('');
             sec.style.display = 'block';
         }
@@ -1764,12 +1809,14 @@
             const procId = state.currentProcId;
             const typeId = state.currentGapType;
             if (!state.responses[procId]) state.responses[procId] = { gaps: [] };
-            state.responses[procId].gaps.push({
+            const newGap = {
                 type: typeId,
                 step: document.getElementById('gap-step').value.trim(),
                 heading, description,
                 mitigation: document.getElementById('gap-mitigation').value.trim(),
-            });
+            };
+            state.responses[procId].gaps.push(newGap);
+            if (state.allResponses[procId]) state.allResponses[procId].gaps.push(newGap);
             saveState();
             renderGapList();
             clearGapForm();
@@ -1782,7 +1829,9 @@
             if (!IS_PRO_OWNER) return;
             const procId = state.currentProcId;
             if (!state.responses[procId]?.gaps) return;
+            const gapToRemove = state.responses[procId].gaps[realIdx];
             state.responses[procId].gaps.splice(realIdx, 1);
+            syncRemoveFromAll(procId, gapToRemove);
             saveState();
             renderGapList();
         }
@@ -1793,8 +1842,32 @@
             const idx = parseInt(el.dataset.idx);
             const field = el.dataset.field;
             if (!state.responses[procId]?.gaps[idx]) return;
-            state.responses[procId].gaps[idx][field] = el.textContent.trim();
+            const gap = state.responses[procId].gaps[idx];
+            const newVal = el.textContent.trim();
+            syncUpdateInAll(procId, gap, field, newVal);
+            gap[field] = newVal;
             saveState();
+        }
+
+        // ─── allResponses sync helpers ────────────────────────────────────────────
+        function syncRemoveFromAll(procId, gap) {
+            const arr = state.allResponses[procId]?.gaps;
+            if (!arr) return;
+            let i = arr.indexOf(gap);
+            if (i === -1) i = arr.findIndex(g =>
+                g.type === gap.type && g.step === gap.step &&
+                g.heading === gap.heading && g.description === gap.description);
+            if (i !== -1) arr.splice(i, 1);
+        }
+
+        function syncUpdateInAll(procId, gap, field, newVal) {
+            const arr = state.allResponses[procId]?.gaps;
+            if (!arr) return;
+            let i = arr.indexOf(gap); // same-reference (newly added this session)
+            if (i === -1) i = arr.findIndex(g =>
+                g.type === gap.type && g.step === gap.step &&
+                g.heading === gap.heading && g.description === gap.description);
+            if (i !== -1) arr[i][field] = newVal;
         }
 
         // ─── PROCESS NAVIGATION ───────────────────────────────────────────────────
@@ -1810,24 +1883,36 @@
         // ─── SUMMARY ──────────────────────────────────────────────────────────────
         let summaryView = 'dept';
 
-        function setSummaryView(v) {
+        async function setSummaryView(v) {
             summaryView = v;
             document.getElementById('toggle-dept').classList.toggle('active', v === 'dept');
             document.getElementById('toggle-org').classList.toggle('active', v === 'org');
-            renderSummary();
+            if (v === 'org') {
+                document.getElementById('summary-body').innerHTML = '<div style="padding:20px;text-align:center;color:var(--text3)">Loading organisation data…</div>';
+                const orgData = await loadOrgResponses();
+                const hasAny = Object.keys(orgData).length > 0;
+                if (!hasAny) {
+                    document.getElementById('summary-body').innerHTML = '<div style="padding:20px;text-align:center;color:var(--danger);font-size:13px">Could not load organisation data. Ensure the <code>load_all_gap_responses</code> function exists in your Supabase project (SQL Editor → run the provided migration SQL).</div>';
+                    return;
+                }
+                renderOrgSummary(orgData);
+            } else {
+                renderDeptSummary();
+            }
         }
 
         function renderSummary() {
-            if (summaryView === 'org') { renderOrgSummary(); return; }
+            if (summaryView === 'org') { setSummaryView('org'); return; }
             renderDeptSummary();
         }
 
         function renderDeptSummary() {
             if (!state.dept) return;
             const procs = PROCESSES[state.dept];
-            let html = `<div class="summary-dept-label", style="font-size: 20px">${DEPT_LABELS[state.dept]}</div>`;
+            let html = `<div class="summary-dept-label" style="font-size: 20px">${DEPT_LABELS[state.dept]}</div>`;
             procs.forEach(p => {
-                const allGaps = state.responses[p.id]?.gaps || [];
+                const allGaps = getDisplayGaps(p.id);
+                const myGaps = state.responses[p.id]?.gaps || [];
                 html += `<div class="summary-proc-row">
                 <div class="summary-proc-name"><span style="font-size:11px;color:var(--text3);display:block;margin-bottom:2px">${p.num}</span>${p.name}</div>
                 <div class="summary-result">`;
@@ -1840,16 +1925,30 @@
                         if (!typed.length) return;
                         html += `<div class="summary-type-group"><div class="summary-type-label" style="color:${gt.color}">${gt.icon} ${gt.label}</div><div class="gap-list" style="margin-bottom:8px">`;
                         typed.forEach(g => {
-                            const realIdx = allGaps.indexOf(g);
-                            html += `<div class="gap-list-item">
-                            <div class="gap-list-body">
-                                <div class="gap-list-step" contenteditable="true" data-proc="${p.id}" data-idx="${realIdx}" data-field="step" onblur="saveSummaryField(this)">${escH(g.step || '')}</div>
-                                <div class="gap-list-heading" contenteditable="true" data-proc="${p.id}" data-idx="${realIdx}" data-field="heading" onblur="saveSummaryField(this)">${escH(g.heading || '')}</div>
-                                <div class="gap-list-desc" contenteditable="true" data-proc="${p.id}" data-idx="${realIdx}" data-field="description" onblur="saveSummaryField(this)">${escH(g.description || '')}</div>
-                                <div class="gap-list-mitigation" contenteditable="true" data-proc="${p.id}" data-idx="${realIdx}" data-field="mitigation" onblur="saveSummaryField(this)">${escH(g.mitigation || '')}</div>
-                            </div>
-                            <button class="btn-icon" title="Remove" onclick="removeSummaryGap('${p.id}',${realIdx})">✕</button>
-                        </div>`;
+                            const myIdx = myGaps.findIndex(mg =>
+                                mg.type === g.type && mg.step === g.step &&
+                                mg.heading === g.heading && mg.description === g.description);
+                            const isMine = IS_PRO_OWNER && myIdx !== -1;
+                            if (isMine) {
+                                html += `<div class="gap-list-item">
+                                <div class="gap-list-body">
+                                    <div class="gap-list-step" contenteditable="true" data-proc="${p.id}" data-idx="${myIdx}" data-field="step" onblur="saveSummaryField(this)">${escH(g.step || '')}</div>
+                                    <div class="gap-list-heading" contenteditable="true" data-proc="${p.id}" data-idx="${myIdx}" data-field="heading" onblur="saveSummaryField(this)">${escH(g.heading || '')}</div>
+                                    <div class="gap-list-desc" contenteditable="true" data-proc="${p.id}" data-idx="${myIdx}" data-field="description" onblur="saveSummaryField(this)">${escH(g.description || '')}</div>
+                                    <div class="gap-list-mitigation" contenteditable="true" data-proc="${p.id}" data-idx="${myIdx}" data-field="mitigation" onblur="saveSummaryField(this)">${escH(g.mitigation || '')}</div>
+                                </div>
+                                <button class="btn-icon" title="Remove" onclick="removeSummaryGap('${p.id}',${myIdx})">✕</button>
+                            </div>`;
+                            } else {
+                                html += `<div class="gap-list-item">
+                                <div class="gap-list-body">
+                                    <div class="gap-list-step">${escH(g.step || '')}</div>
+                                    <div class="gap-list-heading">${escH(g.heading || '')}</div>
+                                    <div class="gap-list-desc">${escH(g.description || '')}</div>
+                                    <div class="gap-list-mitigation">${escH(g.mitigation || '')}</div>
+                                </div>
+                            </div>`;
+                            }
                         });
                         html += `</div></div>`;
                     });
@@ -1859,19 +1958,20 @@
             document.getElementById('summary-body').innerHTML = html;
         }
 
-        function renderOrgSummary() {
+        function renderOrgSummary(orgData) {
+            const responses = orgData || state.responses;
             let html = '';
             Object.entries(DEPT_LABELS).forEach(([deptKey, deptName]) => {
                 const procs = PROCESSES[deptKey];
                 if (!procs) return;
-                const totalGaps = procs.reduce((n, p) => n + (state.responses[p.id]?.gaps?.length || 0), 0);
+                const totalGaps = procs.reduce((n, p) => n + (responses[p.id]?.gaps?.length || 0), 0);
                 html += `<div class="summary-dept-section">
                     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
                         <div class="summary-dept-label" style="font-size: 20px; margin-bottom:0">${deptName}</div>
                         ${totalGaps ? `<span class="badge badge-green">${totalGaps} gap${totalGaps !== 1 ? 's' : ''} total</span>` : `<span class="badge badge-grey">No data submitted</span>`}
                     </div>`;
                 procs.forEach(p => {
-                    const allGaps = state.responses[p.id]?.gaps || [];
+                    const allGaps = responses[p.id]?.gaps || [];
                     html += `<div class="summary-proc-row">
                         <div class="summary-proc-name"><span style="font-size:11px;color:var(--text3);display:block;margin-bottom:2px">${p.num}</span>${p.name}</div>
                         <div class="summary-result">`;
@@ -1909,14 +2009,19 @@
             const idx = parseInt(el.dataset.idx);
             const field = el.dataset.field;
             if (!state.responses[procId]?.gaps[idx]) return;
-            state.responses[procId].gaps[idx][field] = el.textContent.trim();
+            const gap = state.responses[procId].gaps[idx];
+            const newVal = el.textContent.trim();
+            syncUpdateInAll(procId, gap, field, newVal);
+            gap[field] = newVal;
             saveState();
         }
 
         function removeSummaryGap(procId, idx) {
             if (!IS_PRO_OWNER) return;
             if (!state.responses[procId]?.gaps) return;
+            const gapToRemove = state.responses[procId].gaps[idx];
             state.responses[procId].gaps.splice(idx, 1);
+            syncRemoveFromAll(procId, gapToRemove);
             saveState();
             renderSummary();
         }
@@ -1981,11 +2086,12 @@
         });
 
         // ─── INIT ─────────────────────────────────────────────────────────────────
-        loadState().then(() => {
+        loadState().then(async () => {
             if (state.dept) {
                 const card = document.querySelector(`.dept-card[data-dept="${state.dept}"]`);
                 if (card) card.classList.add('selected');
             }
+            await loadOrgResponses(); // populate state.allResponses for org-wide visibility
         });
     </script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
