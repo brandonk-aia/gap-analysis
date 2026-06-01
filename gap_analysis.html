@@ -1158,6 +1158,15 @@
                     <div class="page-sub">Your selection determines which processes you will be asked to review.</div>
                 </div>
                 <div class="dept-grid" id="dept-grid">
+                    <div class="dept-card" data-dept="Investment" onclick="selectDept(this)">
+                        <div class="dept-abbr">INV</div><span class="dept-label">Investment</span>
+                    </div>
+                    <div class="dept-card" data-dept="PostInvestment" onclick="selectDept(this)">
+                        <div class="dept-abbr">PINV</div><span class="dept-label">Post Investment</span>
+                    </div>
+                    <div class="dept-card" data-dept="Risk" onclick="selectDept(this)">
+                        <div class="dept-abbr">ERL</div><span class="dept-label">Enterprise Risk, Legal &amp; Compliance</span>
+                    </div>
                     <div class="dept-card" data-dept="SCM" onclick="selectDept(this)">
                         <div class="dept-abbr">SCM</div><span class="dept-label">Supply Chain Management</span>
                     </div>
@@ -1167,14 +1176,8 @@
                     <div class="dept-card" data-dept="HR" onclick="selectDept(this)">
                         <div class="dept-abbr">HR</div><span class="dept-label">Human Resources</span>
                     </div>
-                    <div class="dept-card" data-dept="Investment" onclick="selectDept(this)">
-                        <div class="dept-abbr">INV</div><span class="dept-label">Investment &amp; Post-Investment</span>
-                    </div>
                     <div class="dept-card" data-dept="IT" onclick="selectDept(this)">
                         <div class="dept-abbr">IT</div><span class="dept-label">Information Technology</span>
-                    </div>
-                    <div class="dept-card" data-dept="Risk" onclick="selectDept(this)">
-                        <div class="dept-abbr">RLC</div><span class="dept-label">Risk, Legal &amp; Compliance</span>
                     </div>
                     <div class="dept-card" data-dept="Marketing" onclick="selectDept(this)">
                         <div class="dept-abbr">MKT</div><span class="dept-label">Marketing &amp; Communications</span>
@@ -1435,14 +1438,20 @@
                 { id: 'inv-1.1.4', num: '1.1.4', name: 'Due Diligence' },
                 { id: 'inv-1.1.5', num: '1.1.5', name: 'Due Diligence Reporting' },
                 { id: 'inv-1.1.6', num: '1.1.6', name: 'Final Appraisal Report' },
-                { id: 'inv-1.2.1', num: '1.2.1', name: 'Implementation' },
-                { id: 'inv-1.3.1', num: '1.3.1', name: 'Post Investment Activities' },
-                { id: 'inv-1.3.2', num: '1.3.2', name: 'Portfolio Management – Default Management' },
-                { id: 'inv-1.3.3', num: '1.3.3', name: 'Legal Recovery' },
+                { id: 'inv-1.2.1', num: '1.2.1', name: 'Implementation (1 of 2)' },
+                { id: 'inv-1.2.2', num: '1.2.2', name: 'Implementation (2 of 2)' },
                 { id: 'inv-2.1.1', num: '2.1.1', name: 'Equity Origination and Initial Screening' },
                 { id: 'inv-2.1.2', num: '2.1.2', name: 'Equity Due Diligence and FAR' },
                 { id: 'inv-2.2.1', num: '2.2.1', name: 'Equity Contracting and Disbursement' },
-                { id: 'inv-2.3.1', num: '2.3.1', name: 'Post Investment Activities' },
+            ],
+            PostInvestment: [
+                { id: 'pinv-1.1.1', num: '1.1.1', name: 'Post Investment Activities (1 of 2)' },
+                { id: 'pinv-1.1.1b', num: '1.1.1', name: 'Post Investment Activities (2 of 2)' },
+                { id: 'pinv-1.1.2', num: '1.1.2', name: 'Portfolio Management – Default Management (1 of 2)' },
+                { id: 'pinv-1.1.2b', num: '1.1.2', name: 'Portfolio Management – Default Management (2 of 2)' },
+                { id: 'pinv-1.1.3', num: '1.1.3', name: 'Legal Recovery (1 of 2)' },
+                { id: 'pinv-1.1.3b', num: '1.1.3', name: 'Legal Recovery (2 of 2)' },
+                { id: 'pinv-2.1.1', num: '2.1.1', name: 'Post Investment Activities' },
             ],
             IT: [
                 { id: 'it-1.1', num: '1.1', name: 'IT - Service Desk' },
@@ -1465,25 +1474,16 @@
                 { id: 'it-1.17', num: '1.17', name: 'Software & Hardware Acquisition' },
             ],
             Risk: [
-                { id: 'risk-1.1', num: '1.1', name: 'Investment Team (Deal Structuring)' },
-                { id: 'risk-1.2.1', num: '1.2.1', name: 'Financial Close' },
-                { id: 'risk-1.2.2', num: '1.2.2', name: 'Disbursement' },
-                { id: 'risk-1.3', num: '1.3', name: 'Post Investment Monitoring' },
-                { id: 'risk-1.4', num: '1.4', name: 'Handover to Legal Recoveries' },
-                { id: 'risk-2.1', num: '2.1', name: 'NDA Review' },
-                { id: 'risk-2.2', num: '2.2', name: 'Preliminary Legal Risk Assessment' },
-                { id: 'risk-2.3', num: '2.3', name: 'Legal DD & FAR Input' },
-                { id: 'risk-2.4', num: '2.4', name: 'Contract Drafting & CP Verification' },
-                { id: 'risk-2.5', num: '2.5', name: 'Breach Management & LODs' },
-                { id: 'risk-2.6', num: '2.6', name: 'Litigation & Legal Recovery' },
-                { id: 'risk-3.1', num: '3.1', name: 'Regulatory Compliance' },
-                { id: 'risk-3.2', num: '3.2', name: 'Policy Compliance' },
-                { id: 'risk-4.1', num: '4.1', name: 'Enterprise Risk Management' },
-                { id: 'risk-5.1', num: '5.1', name: 'Legal Opinion' },
-                { id: 'risk-5.2', num: '5.2', name: 'Policy Drafting' },
-                { id: 'risk-5.3.1', num: '5.3.1', name: 'SLA Drafting' },
-                { id: 'risk-5.3.2', num: '5.3.2', name: 'Contract Drafting (MOUs, NDAs, Lease Agreements, etc.)' },
-                { id: 'risk-6.1', num: '6.1', name: 'Quarterly Reporting, Verification and Advisory' },
+                { id: 'risk-1.1', num: '1.1', name: 'Regulatory Compliance' },
+                { id: 'risk-1.2', num: '1.2', name: 'Policy Compliance' },
+                { id: 'risk-1.3', num: '1.3', name: 'Disclosure of Interest / Conflict of Interest' },
+                { id: 'risk-1.4', num: '1.4', name: 'Risk Management' },
+                { id: 'risk-2.1', num: '2.1', name: 'Enterprise Risk Management' },
+                { id: 'risk-3.1', num: '3.1', name: 'Legal Opinion' },
+                { id: 'risk-3.2', num: '3.2', name: 'Policy Drafting' },
+                { id: 'risk-3.3.1', num: '3.3.1', name: 'SLA Drafting' },
+                { id: 'risk-3.3.2', num: '3.3.2', name: 'Contract Drafting (MOUs, NDAs, Lease Agreements, etc)' },
+                { id: 'risk-4.1', num: '4.1', name: 'Quarterly Reporting, Verification and Advisory' },
             ],
             Marketing: [
                 { id: 'mkt-1.1', num: '1.1', name: 'Social Media Management' },
@@ -1515,9 +1515,10 @@
         };
 
         const DEPT_LABELS = {
+            Investment: 'Investment', PostInvestment: 'Post Investment',
+            Risk: 'Enterprise Risk, Legal & Compliance',
             SCM: 'Supply Chain Management', Finance: 'Finance', HR: 'Human Resources',
-            Investment: 'Investment & Post-Investment', IT: 'Information Technology',
-            Risk: 'Risk, Legal & Compliance', Marketing: 'Marketing & Communications',
+            IT: 'Information Technology', Marketing: 'Marketing & Communications',
             Cosec: 'Company Secretariat', PMO: 'Project Management Office'
         };
 
@@ -2034,7 +2035,7 @@
             const dept = DEPT_LABELS[state.dept];
             const rows = [['Department', 'Process Number', 'Process Name', 'Gap Category', 'Gap #', 'Process Step', 'Gap / Challenge', 'Impact', 'Mitigation / Suggested Solution']];
             procs.forEach(p => {
-                const all = state.responses[p.id]?.gaps || [];
+                const all = getDisplayGaps(p.id) || [];
                 if (!all.length) { rows.push([dept, p.num, p.name, '', '', '', '', '', 'No gaps recorded']); return; }
                 all.forEach((g, i) => {
                     const gt = GAP_TYPES.find(t => t.id === g.type);
@@ -2049,7 +2050,7 @@
             const cat = [['Gap Category', 'Process Number', 'Process Name', 'Process Step', 'Gap / Challenge', 'Impact', 'Mitigation']];
             GAP_TYPES.forEach(gt => {
                 procs.forEach(p => {
-                    (state.responses[p.id]?.gaps || []).filter(g => g.type === gt.id).forEach(g => cat.push([gt.label, p.num, p.name, g.step || '', g.heading || '', g.description || '', g.mitigation || '']));
+                    (getDisplayGaps(p.id) || []).filter(g => g.type === gt.id).forEach(g => cat.push([gt.label, p.num, p.name, g.step || '', g.heading || '', g.description || '', g.mitigation || '']));
                 });
             });
             const ws2 = XLSX.utils.aoa_to_sheet(cat);

@@ -64,13 +64,19 @@ const PROCESS_MAP_FILES = {
     'inv-1.1.5': 'Working maps/Investment/inv-1.1.5.html',
     'inv-1.1.6': 'Working maps/Investment/inv-1.1.6.html',
     'inv-1.2.1': 'Working maps/Investment/inv-1.2.1.html',
-    'inv-1.3.1': 'Working maps/Investment/inv-1.3.1.html',
-    'inv-1.3.2': 'Working maps/Investment/inv-1.3.2.html',
-    'inv-1.3.3': 'Working maps/Investment/inv-1.3.3.html',
+    'inv-1.2.2': 'Working maps/Investment/inv-1.2.2.html',
     'inv-2.1.1': 'Working maps/Investment/inv-2.1.1.html',
     'inv-2.1.2': 'Working maps/Investment/inv-2.1.2.html',
     'inv-2.2.1': 'Working maps/Investment/inv-2.2.1.html',
-    'inv-2.3.1': 'Working maps/Investment/inv-2.3.1.html',
+
+    // ── Post Investment ───────────────────────────────────────────────────────────
+    'pinv-1.1.1':  'Working maps/pInvestment/pinv-1.1.1.html',
+    'pinv-1.1.1b': 'Working maps/pInvestment/pinv-1.1.1b.html',
+    'pinv-1.1.2':  'Working maps/pInvestment/pinv-1.1.2.html',
+    'pinv-1.1.2b': 'Working maps/pInvestment/pinv-1.1.2b.html',
+    'pinv-1.1.3':  'Working maps/pInvestment/pinv-1.1.3.html',
+    'pinv-1.1.3b': 'Working maps/pInvestment/pinv-1.1.3b.html',
+    'pinv-2.1.1':  'Working maps/pInvestment/pinv-2.1.1.html',
 
     // ── IT ───────────────────────────────────────────────────────────────────
     'it-1.1':    'Working maps/IT/it-1.1.html',
@@ -92,26 +98,17 @@ const PROCESS_MAP_FILES = {
     'it-1.16':   'Working maps/IT/it-1.16.html',
     'it-1.17':   'Working maps/IT/it-1.17.html',
 
-    // ── Risk ─────────────────────────────────────────────────────────────────
+    // ── Risk (Enterprise Risk, Legal & Compliance) ────────────────────────────
     'risk-1.1':   'Working maps/Risk/risk-1.1.html',
-    'risk-1.2.1': 'Working maps/Risk/risk-1.2.1.html',
-    'risk-1.2.2': 'Working maps/Risk/risk-1.2.2.html',
+    'risk-1.2':   'Working maps/Risk/risk-1.2.html',
     'risk-1.3':   'Working maps/Risk/risk-1.3.html',
     'risk-1.4':   'Working maps/Risk/risk-1.4.html',
     'risk-2.1':   'Working maps/Risk/risk-2.1.html',
-    'risk-2.2':   'Working maps/Risk/risk-2.2.html',
-    'risk-2.3':   'Working maps/Risk/risk-2.3.html',
-    'risk-2.4':   'Working maps/Risk/risk-2.4.html',
-    'risk-2.5':   'Working maps/Risk/risk-2.5.html',
-    'risk-2.6':   'Working maps/Risk/risk-2.6.html',
     'risk-3.1':   'Working maps/Risk/risk-3.1.html',
     'risk-3.2':   'Working maps/Risk/risk-3.2.html',
+    'risk-3.3.1': 'Working maps/Risk/risk-3.3.1.html',
+    'risk-3.3.2': 'Working maps/Risk/risk-3.3.2.html',
     'risk-4.1':   'Working maps/Risk/risk-4.1.html',
-    'risk-5.1':   'Working maps/Risk/risk-5.1.html',
-    'risk-5.2':   'Working maps/Risk/risk-5.2.html',
-    'risk-5.3.1': 'Working maps/Risk/risk-5.3.1.html',
-    'risk-5.3.2': 'Working maps/Risk/risk-5.3.2.html',
-    'risk-6.1':   'Working maps/Risk/risk-6.1.html',
 
     // ── Marketing ────────────────────────────────────────────────────────────
     'mkt-1.1':  'Working maps/Marketing/mkt-1.1.html',
