@@ -102,6 +102,7 @@ const PROCESS_MAP_FILES = {
     'risk-1.1':   'Working maps/Risk/risk-1.1.html',
     'risk-1.2':   'Working maps/Risk/risk-1.2.html',
     'risk-1.3':   'Working maps/Risk/risk-1.3.html',
+    'risk-1.3b':  'Working maps/Risk/risk-1.3b.html',
     'risk-1.4':   'Working maps/Risk/risk-1.4.html',
     'risk-2.1':   'Working maps/Risk/risk-2.1.html',
     'risk-3.1':   'Working maps/Risk/risk-3.1.html',
