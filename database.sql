@@ -1,20 +1,116 @@
 -- ============================================================
---  MIGRATION: Add is_pro_owner column + update affected functions
---  Run this against the existing database.
+--  COMPLETE DATABASE SCHEMA — AIA Gap Analysis Platform
+--  Run this in Supabase SQL Editor
 -- ============================================================
 
-ALTER TABLE users ADD COLUMN IF NOT EXISTS
-    is_pro_owner BOOLEAN NOT NULL DEFAULT FALSE;
-
--- Backfill any existing users who should be process owners.
--- Replace the email value(s) before running.
-UPDATE users SET is_pro_owner = TRUE
-WHERE email IN ('replace-with-user@email.com');
+-- Enable required extensions
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
 -- ============================================================
---  UPDATED FUNCTIONS
+--  ORGANIZATIONS TABLE
+-- ============================================================
+CREATE TABLE IF NOT EXISTS organizations (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    slug TEXT NOT NULL UNIQUE,
+    name TEXT NOT NULL,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_organizations_slug ON organizations(slug);
+
+-- ============================================================
+--  USERS TABLE
+-- ============================================================
+CREATE TABLE IF NOT EXISTS users (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    email TEXT NOT NULL UNIQUE,
+    password_hash TEXT NOT NULL,
+    full_name TEXT NOT NULL,
+    org_id UUID REFERENCES organizations(id),
+    role TEXT NOT NULL DEFAULT 'respondent',
+    is_pro_owner BOOLEAN NOT NULL DEFAULT FALSE,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
+CREATE INDEX IF NOT EXISTS idx_users_org_id ON users(org_id);
+
+-- ============================================================
+--  SESSIONS TABLE
+-- ============================================================
+CREATE TABLE IF NOT EXISTS sessions (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    token TEXT NOT NULL UNIQUE DEFAULT encode(gen_random_bytes(32), 'hex'),
+    ip_address INET,
+    user_agent TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    expires_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() + INTERVAL '7 days',
+    last_activity TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON sessions(user_id);
+CREATE INDEX IF NOT EXISTS idx_sessions_token ON sessions(token);
+CREATE INDEX IF NOT EXISTS idx_sessions_expires_at ON sessions(expires_at);
+
+-- ============================================================
+--  LOGIN_AUDIT TABLE
+-- ============================================================
+CREATE TABLE IF NOT EXISTS login_audit (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+    email TEXT NOT NULL,
+    event TEXT NOT NULL,
+    ip_address INET,
+    user_agent TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_login_audit_user_id ON login_audit(user_id);
+CREATE INDEX IF NOT EXISTS idx_login_audit_email ON login_audit(email);
+CREATE INDEX IF NOT EXISTS idx_login_audit_created_at ON login_audit(created_at);
+
+-- ============================================================
+--  PROCESSES TABLE
+-- ============================================================
+CREATE TABLE IF NOT EXISTS processes (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    org_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+    department TEXT NOT NULL,
+    name TEXT NOT NULL,
+    description TEXT,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_processes_org_id ON processes(org_id);
+
+-- ============================================================
+--  GAPS TABLE
+-- ============================================================
+CREATE TABLE IF NOT EXISTS gaps (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    process_id UUID NOT NULL REFERENCES processes(id) ON DELETE CASCADE,
+    respondent_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    category TEXT NOT NULL,
+    description TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_gaps_process_id ON gaps(process_id);
+CREATE INDEX IF NOT EXISTS idx_gaps_respondent_id ON gaps(respondent_id);
+
+-- ============================================================
+--  RPC FUNCTIONS
 -- ============================================================
 
+-- Register a new user
 DROP FUNCTION IF EXISTS register_user(TEXT, TEXT, TEXT, TEXT, TEXT, BOOLEAN);
 CREATE OR REPLACE FUNCTION register_user(
     p_email         TEXT,
@@ -68,6 +164,8 @@ BEGIN
 END;
 $$;
 
+-- Authenticate a user
+DROP FUNCTION IF EXISTS authenticate_user(TEXT, TEXT, INET, TEXT);
 CREATE OR REPLACE FUNCTION authenticate_user(
     p_email     TEXT,
     p_password  TEXT,
@@ -88,7 +186,7 @@ BEGIN
 
     IF NOT FOUND OR v_user.password_hash <> crypt(p_password, v_user.password_hash) THEN
         INSERT INTO login_audit (user_id, email, event, ip_address, user_agent)
-        VALUES (v_user.id, v_email, 'login_failed', p_ip, p_agent);
+        VALUES (NULL, v_email, 'login_failed', p_ip, p_agent);
         RAISE EXCEPTION 'INVALID_CREDENTIALS';
     END IF;
 
@@ -106,6 +204,8 @@ BEGIN
 END;
 $$;
 
+-- Validate a session token
+DROP FUNCTION IF EXISTS validate_session(TEXT);
 CREATE OR REPLACE FUNCTION validate_session(p_token TEXT)
 RETURNS TABLE(user_id UUID, full_name TEXT, role TEXT, org_slug TEXT, is_pro_owner BOOLEAN)
 LANGUAGE plpgsql SECURITY DEFINER AS $$
@@ -122,9 +222,8 @@ END;
 $$;
 
 -- ============================================================
---  GRANTS
+--  PERMISSIONS / GRANTS
 -- ============================================================
-
 GRANT EXECUTE ON FUNCTION register_user(TEXT, TEXT, TEXT, TEXT, TEXT, BOOLEAN)
     TO anon, authenticated;
 

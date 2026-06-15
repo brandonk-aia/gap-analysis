@@ -124,7 +124,7 @@ button.ghost:hover{background:#e5e7eb}
 <script>
 "use strict";
 console.log("[converter] script start");
-document.getElementById("js-status").textContent = "JavaScript ready (v3 — Visio + Lucidchart support)";
+document.getElementById("js-status").textContent = "JavaScript ready (v4 — scale-adaptive, multi-style shape detection)";
 document.getElementById("js-status").classList.add("ok");
 
 var state = {
@@ -344,15 +344,96 @@ function detectGeometry(){
       var bb = el.getBBox();
       if (bb.width < 8 || bb.height < 8) return;
       if (bb.width > fullW * 1.05 || bb.height > fullH * 1.05) return;
+      // Skip invisible shapes. Lucidchart (and others) layer transparent
+      // background / hit-target rectangles (fill-opacity:0, no stroke) over real
+      // shapes; without this they get detected as phantom tasks and inflate the
+      // counts. A shape counts only if it has a visible fill OR a visible stroke.
+      var fill = (el.getAttribute("fill") || "").toLowerCase();
+      var fOp = el.getAttribute("fill-opacity");
+      var fillInvisible = fill === "none" || fill === "transparent" ||
+                          (fOp !== null && parseFloat(fOp) === 0);
+      var stroke = (el.getAttribute("stroke") || "").toLowerCase();
+      var sOp = el.getAttribute("stroke-opacity");
+      var sw = el.getAttribute("stroke-width");
+      var strokeInvisible = !stroke || stroke === "none" || stroke === "transparent" ||
+                            (sOp !== null && parseFloat(sOp) === 0) ||
+                            (sw !== null && parseFloat(sw) === 0);
+      if (fillInvisible && strokeInvisible) return;
       cands.push({ el: el, bb: bb });
     } catch(e) {}
   });
   console.log("[converter] geometry: " + cands.length + " candidates");
 
+  // === Scale-aware detection config ===========================================
+  // All shape sizes are expressed as FRACTIONS of the diagram width (DW) instead
+  // of absolute pixels, so detection auto-adapts to any export resolution. Our
+  // in-house maps are ~2646px wide; a consultant's maps may be ~10000px+ wide.
+  // The same fractions catch shapes in both because shapes scale with the canvas.
+  //
+  // To tune for a new diagramming style, adjust the fractions / aspect ratios /
+  // fill palettes below — you shouldn't need to touch the detection code itself.
+  var DW = fullW, DH = fullH;
+  var CFG = {
+    // Tasks / activities: rounded or square rectangles in a "wide-ish" aspect.
+    taskMinW: 0.012, taskMaxW: 0.46, taskMinH: 0.008, taskMaxH: 0.24,
+    taskMinAR: 1.05, taskMaxAR: 8.0,
+    // Events: small circles (start / intermediate / end).
+    evtMin: 0.004, evtMax: 0.075, evtMinAR: 0.70, evtMaxAR: 1.40,
+    // Gateways: diamonds (decision gates).
+    gwMin: 0.006, gwMax: 0.11, gwMinAR: 0.55, gwMaxAR: 1.95,
+    // Lanes: bands spanning most of the diagram width.
+    laneWFrac: 0.55, laneMinHFrac: 0.012, laneMaxHFrac: 0.55, laneAR: 2.2,
+    // Fill-colour hints (lowercase, whitespace removed). These BOOST detection
+    // for colour-coded maps but are never required — geometry alone still works,
+    // so monochrome / white-filled shapes are still detected by shape.
+    fillTask:    ["#dbeef3","#ccecff","#deebf7","#ddebf7","#bdd7ee","#daeef3","#dce6f1","#e2efda","#ddd6e5","#d9e2f3","#cfe2f3","#d0cece"],
+    fillEvent:   ["#00b050","#92d050","#c00000","#e00","#ee0000","#ff0000","#ffc000","#70ad47","#ff0"],
+    fillGateway: ["#fff2cc","#ffe699","#ffd966","#fff2cc","#f4b183","#ffe599"],
+    fillLane:    ["#002060","#1f3864","#203864","#44546a","#1f4e79","#2e75b6","#305496"]
+  };
+
+  function fillOf(el){ return (el.getAttribute("fill") || "").toLowerCase().replace(/\s/g, ""); }
+  function inList(v, arr){ return v && arr.indexOf(v) !== -1; }
+
+  // Classify a shape by its intrinsic geometry — independent of size or tool.
+  //   circle  : only curves/arcs, no straight edges      (events)
+  //   diamond : only diagonal lines, no axis-aligned edges (gateways / decision gates)
+  //   rect    : has axis-aligned (h/v) edges              (tasks / lanes / pools)
+  // This replaces the old approach of matching tool-specific path command
+  // signatures (e.g. Lucidchart's exact arc radii), which broke on any map drawn
+  // with different corner radii or shape primitives.
+  function shapeKind(el){
+    var tag = el.tagName.toLowerCase();
+    if (tag === "circle" || tag === "ellipse") return "circle";
+    if (tag === "rect") return "rect";
+    if (tag === "polygon") {
+      var np = (el.getAttribute("points") || "").trim().split(/\s+/).filter(Boolean).length;
+      return np === 4 ? "diamond" : "rect";
+    }
+    var d = el.getAttribute("d") || "";
+    var hasCurve = /[cCsSqQtT]/.test(d);
+    var arcs     = (d.match(/[aA]/g) || []).length;
+    var hasL     = /[lL]/.test(d);
+    var hasH     = /[hH]/.test(d);
+    var hasV     = /[vV]/.test(d);
+    var straight = hasH || hasV || hasL;
+    // Pure curves / arcs with no straight edges → circle or ellipse.
+    if (!straight && (hasCurve || arcs >= 2)) return "circle";
+    // Only diagonal line segments, no axis-aligned edges → diamond / rhombus.
+    if (hasL && !hasH && !hasV) return "diamond";
+    // Axis-aligned straight edges → rectangle (rounded corners are fine).
+    if (hasH && hasV) return "rect";
+    // Anything else closed: treat as rectangle (safest catch-all for tasks).
+    return "rect";
+  }
+
   // Lanes
   var laneRaw = cands.filter(function(c){
     var ar = c.bb.width / c.bb.height;
-    return c.bb.width > fullW * 0.7 && c.bb.height > 60 && c.bb.height < fullH * 0.5 && ar > 2.5;
+    return c.bb.width > DW * CFG.laneWFrac &&
+           c.bb.height > DH * CFG.laneMinHFrac &&
+           c.bb.height < DH * CFG.laneMaxHFrac &&
+           ar > CFG.laneAR;
   });
   var seen = [];
   laneRaw.forEach(function(c){
@@ -371,36 +452,22 @@ function detectGeometry(){
   var used = [];
   function isUsed(el){ return used.indexOf(el) !== -1; }
 
-  // Tasks
+  // Tasks / activities — any rectangle in the task size/aspect envelope.
+  // Detection is scale-relative (fractions of diagram width) and shape-based, so
+  // it no longer depends on a specific tool's corner-radius or path commands.
+  // A matching fill colour also qualifies a shape even if its geometry is
+  // borderline (covers white-filled tasks and non-standard rectangles).
   cands.forEach(function(c){
     if (isUsed(c.el)) return;
-    var w = c.bb.width, h = c.bb.height;
-    if (w < 100 || w > 400 || h < 60 || h > 180) return;
-    var ar = w / h;
-    if (ar < 1.2 || ar > 3.5) return;
-    var ok = false;
-    var tag = c.el.tagName.toLowerCase();
-    if (tag === "rect") {
-      if (parseFloat(c.el.getAttribute("rx") || "0") >= 6) ok = true;
-    } else if (tag === "path") {
-      var d = c.el.getAttribute("d") || "";
-      // Format A — Lucidchart's classic rounded-rect using arc commands:
-      //   "M x y a 12.8 12.8 0 0 1 ..." with 4 arcs of radius 10–15px
-      if (/a\s*1[0-5](\.\d+)?[\s,]+1[0-5](\.\d+)?/.test(d)) {
-        var arcs = (d.match(/[aA]\s*1[0-5]/g) || []).length;
-        if (arcs >= 3) ok = true;
-      }
-      // Format B — Lucidchart's alternative rounded-rect using cubic-bezier corners:
-      //   "M x y h{w} c... v{h} c... h-{w} c... v-{h} c... z"
-      // Has 4 cubic curves AND both h and v line commands AND closes with z.
-      if (!ok) {
-        var hasZ = /z\s*$/i.test(d.trim());
-        var hasH = /[hH]\s*-?[\d.]/.test(d);
-        var hasV = /[vV]\s*-?[\d.]/.test(d);
-        var cubicCount = (d.match(/[cC]\s*-?[\d.]/g) || []).length;
-        if (hasZ && hasH && hasV && cubicCount >= 3) ok = true;
-      }
-    }
+    var w = c.bb.width, h = c.bb.height, ar = w / h;
+    var sizeOk = w >= DW * CFG.taskMinW && w <= DW * CFG.taskMaxW &&
+                 h >= DW * CFG.taskMinH && h <= DW * CFG.taskMaxH;
+    if (!sizeOk) return;
+    var arOk = ar >= CFG.taskMinAR && ar <= CFG.taskMaxAR;
+    var kind = shapeKind(c.el);
+    var colorTask = inList(fillOf(c.el), CFG.fillTask);
+    // Rectangle in the right aspect, OR colour-tagged as a task (and not a circle).
+    var ok = (kind === "rect" && arOk) || (colorTask && kind !== "circle" && arOk);
     if (!ok) return;
     if (state.tasks.some(function(t){ return Math.abs(t.x - c.bb.x) < 4 && Math.abs(t.y - c.bb.y) < 4; })) return;
     state.tasks.push({ id: "task-" + state.tasks.length, label: "", x: c.bb.x, y: c.bb.y, w: w, h: h, lane: "" });
@@ -414,9 +481,9 @@ function detectGeometry(){
     if (isUsed(c.el)) return;
     var w = c.bb.width, h = c.bb.height;
     var ar = w / h;
-    // Widened size range: down to 25px to catch thin-stroke Start events whose
-    // bbox is smaller than typical events (no thick stroke padding the bbox).
-    if (w < 25 || w > 95 || ar < 0.80 || ar > 1.20) return;
+    // Scale-relative size range (fractions of diagram width), so events are
+    // caught on small in-house maps and large consultant maps alike.
+    if (w < DW * CFG.evtMin || w > DW * CFG.evtMax || ar < CFG.evtMinAR || ar > CFG.evtMaxAR) return;
     var tag = c.el.tagName.toLowerCase();
     var isCirc = false;
     if (tag === "circle" || tag === "ellipse") {
@@ -498,7 +565,7 @@ function detectGeometry(){
     if (isUsed(c.el)) return;
     var w = c.bb.width, h = c.bb.height;
     var ar = w / h;
-    if (w < 20 || w > 100 || ar < 0.75 || ar > 1.25) return;
+    if (w < DW * 0.003 || w > DW * CFG.evtMax || ar < 0.72 || ar > 1.30) return;
     var tag = c.el.tagName.toLowerCase();
     var ok = (tag === "circle" || tag === "ellipse");
     if (tag === "path") {
@@ -532,39 +599,28 @@ function detectGeometry(){
     }
   }
 
-  // Gateways
+  // Gateways / decision gates — diamonds (rhombus shapes).
+  // Detected by geometry (diagonal-line rhombus or 4-point polygon) or by a
+  // gateway fill colour, sized relative to the diagram. This replaces the old
+  // rule that only matched one tool's exact arc radius ("a1.22"), which missed
+  // decision gates drawn with any other corner radius or as plain polygons.
   cands.forEach(function(c){
     if (isUsed(c.el)) return;
-    var w = c.bb.width, h = c.bb.height;
-    var ar = w / h;
-    if (w < 60 || w > 160 || ar < 1.1 || ar > 2.0) return;
-    var tag = c.el.tagName.toLowerCase();
-    if (tag === "path") {
-      var d = c.el.getAttribute("d") || "";
-      if (/a\s*1\.22/i.test(d)) {
-        if (state.gateways.some(function(g){ return Math.abs(g.cx - (c.bb.x + w/2)) < 8; })) return;
-        state.gateways.push({
-          id: "gateway-" + state.gateways.length,
-          label: "", sub: "",
-          cx: c.bb.x + w/2, cy: c.bb.y + h/2,
-          bbox: { x: c.bb.x, y: c.bb.y, w: w, h: h },
-          type: "Exclusive Gateway (XOR)"
-        });
-        used.push(c.el);
-      }
-    } else if (tag === "polygon") {
-      var pts = (c.el.getAttribute("points") || "").trim().split(/\s+/);
-      if (pts.length === 4) {
-        state.gateways.push({
-          id: "gateway-" + state.gateways.length,
-          label: "", sub: "",
-          cx: c.bb.x + w/2, cy: c.bb.y + h/2,
-          bbox: { x: c.bb.x, y: c.bb.y, w: w, h: h },
-          type: "Exclusive Gateway (XOR)"
-        });
-        used.push(c.el);
-      }
-    }
+    var w = c.bb.width, h = c.bb.height, ar = w / h;
+    if (w < DW * CFG.gwMin || w > DW * CFG.gwMax || ar < CFG.gwMinAR || ar > CFG.gwMaxAR) return;
+    var kind = shapeKind(c.el);
+    var colorGate = inList(fillOf(c.el), CFG.fillGateway);
+    if (kind !== "diamond" && !colorGate) return;
+    var cx = c.bb.x + w / 2, cy = c.bb.y + h / 2;
+    if (state.gateways.some(function(g){ return Math.abs(g.cx - cx) < 8 && Math.abs(g.cy - cy) < 8; })) return;
+    state.gateways.push({
+      id: "gateway-" + state.gateways.length,
+      label: "", sub: "",
+      cx: cx, cy: cy,
+      bbox: { x: c.bb.x, y: c.bb.y, w: w, h: h },
+      type: "Exclusive Gateway (XOR)"
+    });
+    used.push(c.el);
   });
 }
 
