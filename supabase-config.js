@@ -7,7 +7,7 @@
 //  a <script> tag before any other app scripts.
 // ============================================================
 
-const SUPABASE_URL      = 'https://jbnegldetefmcorcxnxp.supabase.co';
+const SUPABASE_URL      = 'https://zmcizacshrlxlhkbynep.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_2BODQAV7xC3JlFaUZvB3Rg_S9YFgY2P';
 
 // Initialise the global Supabase client.
