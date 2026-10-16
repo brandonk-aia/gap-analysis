@@ -8,7 +8,7 @@
 // ============================================================
 
 const SUPABASE_URL      = 'https://jbnegldetefmcorcxnxp.supabase.co';
-const SUPABASE_ANON_KEY = 'sb_publishable_KKflLIdlNza1bAZvyA4tow_IN4nxQOp';
+const SUPABASE_ANON_KEY = 'sb_publishable_2BODQAV7xC3JlFaUZvB3Rg_S9YFgY2P';
 
 // Initialise the global Supabase client.
 // Requires the supabase-js CDN script to be loaded first.
